@@ -17,7 +17,7 @@ Feel free to use docker-compose 1.6 sample excerpts for your specific use case. 
 ## Standard port routing for http apps
 
 ```
-version: 2.0
+version: '2'
 
 services:
 
@@ -40,7 +40,7 @@ services:
 ```
 ### Custom port routing for http apps
 ```
-version: 2.0
+version: '2'
 
 services:
 
@@ -64,7 +64,7 @@ services:
 ```
 ## Standard port routing for tcp apps (https etc.)
 ```
-version: 2.0
+version: '2'
 
 services:
 
@@ -88,7 +88,7 @@ services:
 ```
 ## Standard port routing for tcp service (eg. mongodb, etc. )
 ```
-version: 2.0
+version: '2'
 
 services:
 

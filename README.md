@@ -12,7 +12,7 @@ This docker container solves multiple connectivity issues when working at large 
 - Docker-gen
 
 ## Usage
-Feel free to use docker-compose 1.6 sample excerpts for your specific use case.
+Feel free to use docker-compose 1.6 sample excerpts for your specific use case. HAPROXY stats are listening on Port 1111.
 
 ## Standard port routing for http apps
 
@@ -29,7 +29,6 @@ services:
             - ROUTER_HTTP_PORT=80
         ports:
             - "80:80"
-            - "443:443"
             - "1111:1111"
         restart: always
 

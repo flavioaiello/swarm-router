@@ -112,4 +112,5 @@ services:
 ```
 
 ## Todo's
+- [ ] Logging to stdout and stderr
 - [ ] Review supervisor configuration

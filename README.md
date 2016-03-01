@@ -112,5 +112,5 @@ services:
 ```
 
 ## Todo's
+- [x] Review supervisor configuration (reload and restart on new containers works now)
 - [ ] Logging to stdout and stderr
-- [ ] Review supervisor configuration

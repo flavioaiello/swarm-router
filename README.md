@@ -1,10 +1,11 @@
 # SNI-Router
 
 ## Scope
-This docker container solves multiple connectivity issues when working at large scale with docker:
-- Port overlapping on HTTP and TCP (SNI on TLS)
-- End to end encryption with TLS passthrough
-- Automatic reconfiguration when further containers are spinned up
+This docker container is inspired by jwilder's nginx automatic reverse proxy and is using his docker-gen library to generate configuration files up to the actual docker runtime.
+It accomplishes the same as the mentioned reverse proxy based on nginx and solves multiple connectivity issues using haproxy instead:
+- Port overlapping on HTTP and TCP (eg. SNI on TLS)
+- End to end encryption with TLS passthrough (This is the SNI-Router part)
+- Automatic reconfiguration when further containers are spinned up or removed
 
 ##  Whats inside
 - Alpine linux

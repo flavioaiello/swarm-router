@@ -3,52 +3,26 @@ version: '2'
 services:
 
   sni-router:
-    build: .
+    build:
+      context: .
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     environment:
       - ROUTER_HTTP_PORT=80
+      - ROUTER_TCP_PORT=443
     ports:
       - "80:80"
+      - "443:443"
       - "1111:1111"
+    network_mode: "bridge"
     restart: always
 
   dockerui:
     image: dockerui/dockerui:latest
-    privileged: true
     environment:
       - VIRTUAL_HOST=dockerui.vcap.me
       - VIRTUAL_HTTP_PORT=9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
-
-  dockerui2:
-    image: dockerui/dockerui:latest
-    privileged: true
-    environment:
-      - VIRTUAL_HOST=docafsakerui2.vcap.me
-      - VIRTUAL_HTTP_PORT=9000
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
-
-  dockerui3:
-    image: dockerui/dockerui:latest
-    privileged: true
-    environment:
-      - VIRTUAL_HOST=dockerui3.vcap.me
-      - VIRTUAL_HTTP_PORT=9000
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
-
-  dockerui4:
-    image: dockerui/dockerui:latest
-    privileged: true
-    environment:
-      - VIRTUAL_HOST=dockerui4.vcap.me
-      - VIRTUAL_HTTP_PORT=9000
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: "bridge"
     restart: always

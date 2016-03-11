@@ -25,14 +25,7 @@ frontend sni-router-http
     {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
     {{ range $container := $containers }}
     {{ if (or $container.Env.VIRTUAL_HTTP_PORT (not $container.Env.VIRTUAL_TCP_PORT))}}
-    acl route_{{ $container.Name }} hdr(host) -i {{ $host }}
-    {{ end }}
-    {{ end }}
-    {{ end }}
-    {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
-    {{ range $container := $containers }}
-    {{ if (or $container.Env.VIRTUAL_HTTP_PORT (not $container.Env.VIRTUAL_TCP_PORT))}}
-    use_backend httpbackend_{{ $container.Name }} if route_{{ $container.Name }}
+    use_backend httpbackend_{{ $container.Name }} if { hdr(host) -i {{ $host }} }
     {{ end }}
     {{ end }}
     {{ end }}
@@ -57,17 +50,12 @@ backend httpbackend_{{ $container.Name }}
 frontend sni-router-tcp
     bind *:{{ $.Env.ROUTER_TCP_PORT }}
     mode tcp
+    tcp-request inspect-delay 5s
+    tcp-request content accept if { req_ssl_hello_type 1 }
     {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
     {{ range $container := $containers }}
     {{ if $container.Env.VIRTUAL_TCP_PORT }}
-    acl route_{{ $container.Name }} req.ssl_sni -i {{ $host }}
-    {{ end }}
-    {{ end }}
-    {{ end }}
-    {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
-    {{ range $container := $containers }}
-    {{ if $container.Env.VIRTUAL_TCP_PORT }}
-    use_backend tcpbackend_{{ $container.Name }} if route_{{ $container.Name }}
+    use_backend tcpbackend_{{ $container.Name }} if { req_ssl_sni -i {{ $host }} }
     {{ end }}
     {{ end }}
     {{ end }}

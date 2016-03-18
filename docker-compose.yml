@@ -14,7 +14,9 @@ services:
       - "80:80"
       - "443:443"
       - "1111:1111"
-    network_mode: "bridge"
+    networks:
+      - default
+      - app
     restart: always
 
   dockerui:
@@ -24,5 +26,11 @@ services:
       - VIRTUAL_HTTP_PORT=9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    network_mode: "bridge"
+    networks:
+      - app
     restart: always
+
+networks:
+
+  app:
+    driver: bridge

@@ -37,8 +37,9 @@ backend httpbackend_{{ $container.Name }}
     mode http
     {{ $port := coalesce $container.Env.VIRTUAL_HTTP_PORT "80" }}
     {{ $address := where $container.Addresses "Port" $port | first }}
-    {{ if and $address.IP $address.Port }}
-    server server_{{ $container.Name }} {{ $address.IP }}:{{ $address.Port }} check
+    {{ $network := index $container.Networks 0 }}
+    {{ if and $network.IP $address.Port }}
+    server server_{{ $container.Name }} {{ $network.IP }}:{{ $address.Port }} check
     {{ end }}
 {{ end }}
 {{ end }}
@@ -66,8 +67,9 @@ frontend sni-router-tcp
 backend tcpbackend_{{ $container.Name }}
     mode tcp
     {{ $address := where $container.Addresses "Port" $container.Env.VIRTUAL_TCP_PORT | first }}
-    {{ if and $address.IP $address.Port }}
-    server server_{{ $container.Name }} {{ $address.IP }}:{{ $address.Port }} check
+    {{ $network := index $container.Networks 0 }}
+    {{ if and $network.IP $address.Port }}
+    server server_{{ $container.Name }} {{ $network.IP }}:{{ $address.Port }} check
     {{ end }}
 {{ end }}
 {{ end }}

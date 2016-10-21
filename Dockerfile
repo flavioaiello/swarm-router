@@ -1,7 +1,4 @@
 FROM alpine:latest
-ARG TAG
-LABEL TAG=${TAG}
-
 
 ADD src /
 

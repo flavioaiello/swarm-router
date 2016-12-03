@@ -1,4 +1,5 @@
 # SNI-Router
+Very lean dynamic traffic router based on alpine linux and haproxy, optionally with encryption passtrough based on X.509 mutual auth. For a more sophisticated setup you could either derive from this image and extend it with a replicated KVS and Keepalived or use Traefik.io.
 
 ## Scope
 This docker container is inspired by jwilder's nginx automatic reverse proxy and is using his docker-gen library to generate configuration files up to the actual docker runtime.
@@ -7,15 +8,9 @@ It accomplishes the same as the mentioned reverse proxy based on nginx and solve
 - End to end encryption with TLS passthrough (This is the SNI-Router part)
 - Automatic reconfiguration when further containers are spinned up or removed
 
-##  Whats inside
-- Alpine linux
-- HAProxy 
-- Docker-gen
+## Docker compose sample excerpts
 
-## Usage
-Feel free to use docker-compose 1.6 sample excerpts for your specific use case. HAPROXY stats are listening on Port 1111.
-
-## Standard port routing for http apps
+### Standard port routing for http apps
 
 ```
 version: '2'
@@ -23,14 +18,14 @@ version: '2'
 services:
 
     sni-router:
-        build: serverking/sni-router:latest
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
             - ROUTER_HTTP_PORT=80
         ports:
             - "80:80"
-            - "1111:1111"
+            - "1111:1111"         # Stats listening on Port 1111
         restart: always
 
     yours_http_on_default_port:
@@ -46,7 +41,7 @@ version: '2'
 services:
 
     sni-router:
-        build: serverking/sni-router:latest
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
@@ -63,14 +58,14 @@ services:
             - VIRTUAL_HTTP_PORT=8000
         ...
 ```
-## Standard port routing for tcp apps (https etc.)
+### Standard port routing for tcp apps (https etc.)
 ```
 version: '2'
 
 services:
 
     sni-router:
-        build: serverking/sni-router:latest
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
@@ -87,14 +82,14 @@ services:
             - VIRTUAL_TCP_PORT=443
         ...
 ```
-## Standard port routing for tcp service (eg. mongodb, etc. )
+### Standard port routing for tcp service (eg. mongodb, etc. )
 ```
 version: '2'
 
 services:
 
     sni-router:
-        build: serverking/sni-router:latest
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
@@ -112,6 +107,24 @@ services:
         ...
 ```
 
-## Todo's
-- [x] Review supervisor configuration (reload and restart on new containers works now)
-- [ ] Logging to stdout and stderr
+## Versioning
+Versioning is an issue when deploying the latest release. For this purpose an additional label will be provided during build time. 
+The Dockerfile must be extended with an according label argument as shown below:
+```
+ARG TAG
+LABEL TAG=${TAG}
+```
+Arguments must be passed to the build process using `--build-arg TAG="${TAG}"`.
+
+## Reporting
+```
+docker inspect --format \
+&quot;{{ index .Config.Labels \&quot;com.docker.compose.project\&quot;}},\
+ {{ index .Config.Labels \&quot;com.docker.compose.service\&quot;}},\
+ {{ index .Config.Labels \&quot;TAG\&quot;}},\
+ {{ index .State.Status }},\
+ {{ printf \&quot;%.16s\&quot; .Created }},\
+ {{ printf \&quot;%.16s\&quot; .State.StartedAt }},\
+ {{ index .RestartCount }}&quot; $(docker ps -f name=${STAGE} -q) &gt;&gt; reports/${SHORTNAME}.report
+```
+

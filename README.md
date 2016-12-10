@@ -7,6 +7,7 @@ It accomplishes the same as the mentioned reverse proxy based on nginx and solve
 - Port overlapping on HTTP and TCP (eg. SNI on TLS)
 - End to end encryption with TLS passthrough (This is the SNI-Router part)
 - Automatic reconfiguration when further containers are spinned up or removed
+- TLS Offloading with SNI-Routing
 
 ## Docker compose sample excerpts
 
@@ -93,7 +94,7 @@ services:
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
-            - ROUTER_TCP_PORT=443
+            - ROUTER_TCP_PORT=27017
         ports:
             - "27017:27017"
             - "1111:1111"
@@ -105,6 +106,32 @@ services:
             - VIRTUAL_HOST=mongodb.myfancywebsite.com
             - VIRTUAL_TCP_PORT=27017
         ...
+```
+### TLS Offloading with SNI Routing for tcp service (eg. mySQL, etc. )
+```
+version: '2'
+
+services:
+
+    sni-router:
+      build: .
+      volumes:
+        - /var/run/docker.sock:/tmp/docker.sock
+        - /data/certs/:/certs/:ro
+      environment:
+        - ROUTER_TCP_PORT=443
+        - TLS_CERT=/certs/fullchain.pem
+      ports:
+        - "443:443"
+        - "1111:1111"
+      restart: always
+
+    yours_tcp_on_custom_port:
+      ...
+      environment:
+        - VIRTUAL_HOST=db.myfancywebsite.com
+        - VIRTUAL_TCP_PORT=3306
+      ...
 ```
 
 ## Versioning

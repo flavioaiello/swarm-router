@@ -51,14 +51,14 @@ backend httpbackend_{{ $container.Name }}
 
 {{ if $.Env.ROUTER_TCP_PORT }}
 frontend sni-router-tcp
-    bind *:{{ $.Env.ROUTER_TCP_PORT }}
+    bind *:{{ $.Env.ROUTER_TCP_PORT }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}
     mode tcp
     tcp-request inspect-delay 5s
     tcp-request content accept if { req.ssl_hello_type 1 }
     {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
     {{ range $container := $containers }}
     {{ if $container.Env.VIRTUAL_TCP_PORT }}
-    use_backend tcpbackend_{{ $container.Name }} if { req.ssl_sni -i {{ $host }} }
+    use_backend tcpbackend_{{ $container.Name }} if { {{ if $.Env.TLS_CERT }}ssl_fc_sni{{ else }}req.ssl_sni{{ end }} -i {{ $host }} }
     {{ end }}
     {{ end }}
     {{ end }}

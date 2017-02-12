@@ -1,5 +1,5 @@
 # SNI-Router
-Very lean dynamic traffic router based on alpine linux and haproxy, optionally with encryption passtrough based on X.509 mutual auth. For a more sophisticated setup you could either derive from this image and extend it with a replicated KVS and Keepalived or use Traefik.io.
+Very lean dynamic traffic router based on alpine linux and haproxy, optionally with encryption passtrough based on X.509 mutual auth. For a more sophisticated setup you could either derive from this image and extend it or use Traefik.io.
 
 ## Scope
 This docker container is inspired by jwilder's nginx automatic reverse proxy and is using his docker-gen library to generate configuration files up to the actual docker runtime.

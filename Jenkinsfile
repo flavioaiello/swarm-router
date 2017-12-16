@@ -1,9 +1,9 @@
 #!groovy
 
 def dockerImageName = env.JOB_NAME.substring(env.JOB_NAME.lastIndexOf('/') + 1)
-def dockerRegistry = 'http://localhost:yourrepoport'
-def dockerRepository = 'yourrepo'
-def dockerCredentialsId = 'yourrepouserid'
+def dockerRegistry = 'http://localhost:5000'
+def dockerRepository = 'default'
+def dockerCredentialsId = 'docker'
 
 node {
     stage('Checkout') {

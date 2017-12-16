@@ -1,5 +1,5 @@
 # SNI-Router
-Very lean dynamic traffic router based on alpine linux and haproxy, optionally with encryption passtrough based on X.509 mutual auth. For a more sophisticated setup you could either derive from this image and extend it or use Traefik.io.
+Very lean dynamic traffic router based on alpine linux and haproxy, optionally with encryption passtrough based on X.509 mutual auth. For a more sophisticated setup you could either derive from this image and extend it with a replicated KVS and Keepalived or use Traefik.io.
 
 ## Scope
 This docker container is inspired by jwilder's nginx automatic reverse proxy and is using his docker-gen library to generate configuration files up to the actual docker runtime.
@@ -19,7 +19,7 @@ version: '2'
 services:
 
     sni-router:
-        image: flavioaiello/sni-router
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
@@ -42,7 +42,7 @@ version: '2'
 services:
 
     sni-router:
-        image: flavioaiello/sni-router
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
@@ -66,7 +66,7 @@ version: '2'
 services:
 
     sni-router:
-        image: flavioaiello/sni-router
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
@@ -90,7 +90,7 @@ version: '2'
 services:
 
     sni-router:
-        image: flavioaiello/sni-router
+        build: .
         volumes:
             - /var/run/docker.sock:/tmp/docker.sock
         environment:
@@ -114,7 +114,7 @@ version: '2'
 services:
 
     sni-router:
-      image: flavioaiello/sni-router
+      build: .
       volumes:
         - /var/run/docker.sock:/tmp/docker.sock
         - /data/certs/:/certs/:ro
@@ -134,5 +134,24 @@ services:
       ...
 ```
 
-## Contribute
-If you want to further customize this image, please feel free to contribute.
+## Versioning
+Versioning is an issue when deploying the latest release. For this purpose an additional label will be provided during build time. 
+The Dockerfile must be extended with an according label argument as shown below:
+```
+ARG TAG
+LABEL TAG=${TAG}
+```
+Arguments must be passed to the build process using `--build-arg TAG="${TAG}"`.
+
+## Reporting
+```
+docker inspect --format \
+&quot;{{ index .Config.Labels \&quot;com.docker.compose.project\&quot;}},\
+ {{ index .Config.Labels \&quot;com.docker.compose.service\&quot;}},\
+ {{ index .Config.Labels \&quot;TAG\&quot;}},\
+ {{ index .State.Status }},\
+ {{ printf \&quot;%.16s\&quot; .Created }},\
+ {{ printf \&quot;%.16s\&quot; .State.StartedAt }},\
+ {{ index .RestartCount }}&quot; $(docker ps -f name=${STAGE} -q) &gt;&gt; reports/${SHORTNAME}.report
+```
+

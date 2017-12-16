@@ -1,3 +1,5 @@
+{{ $CurrentContainer := where $ "ID" .Docker.CurrentContainerID | first }}
+
 global
     maxconn 4096
 
@@ -11,6 +13,14 @@ defaults
     timeout client 7200s
     timeout server 7200s
     timeout connect 60s
+    default-server init-addr last,libc,none
+
+resolvers docker
+    nameserver dns 127.0.0.11:53
+    resolve_retries 20
+    timeout retry 1s
+    hold timeout 5s
+    hold valid 5s
 
 listen stats
     bind *:1111
@@ -21,7 +31,9 @@ listen stats
 
 {{ if $.Env.ROUTER_HTTP_PORT }}
 frontend sni-router-http
-    bind *:{{ $.Env.ROUTER_HTTP_PORT }}
+    {{ range $port := split $.Env.ROUTER_HTTP_PORT " " }}
+    bind *:{{ $port }}
+    {{ end }}
     mode http
     {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
     {{ range $container := $containers }}
@@ -30,7 +42,6 @@ frontend sni-router-http
     {{ end }}
     {{ end }}
     {{ end }}
-
 {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
 {{ range $container := $containers }}
 {{ if (or $container.Env.VIRTUAL_HTTP_PORT (not $container.Env.VIRTUAL_TCP_PORT))}}
@@ -38,20 +49,24 @@ backend httpbackend_{{ $container.Name }}
     mode http
     {{ $port := coalesce $container.Env.VIRTUAL_HTTP_PORT "80" }}
     {{ $address := where $container.Addresses "Port" $port | first }}
-    {{ $network := index $container.Networks 0 }}
-    {{ if and $network.IP $address.Port }}
-    server server_{{ $container.Name }} {{ $network.IP }}:{{ $address.Port }} check
+    {{ range $knownNetwork := $CurrentContainer.Networks }}
+    {{ range $containerNetwork := $container.Networks }}
+    {{ if eq $knownNetwork.Name $containerNetwork.Name }}
+    server server_{{ $container.Name }} {{ $container.Name }}:{{ $address.Port }} check inter 10s resolvers docker
+    {{ end }}
+    {{ end }}
     {{ end }}
 {{ end }}
 {{ end }}
 {{ end }}
-
 {{ end }}
 
 
 {{ if $.Env.ROUTER_TCP_PORT }}
 frontend sni-router-tcp
-    bind *:{{ $.Env.ROUTER_TCP_PORT }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}
+    {{ range $port := split $.Env.ROUTER_TCP_PORT " " }}
+    bind *:{{ $port }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}
+    {{ end }}
     mode tcp
     tcp-request inspect-delay 5s
     tcp-request content accept if { req.ssl_hello_type 1 }
@@ -62,19 +77,57 @@ frontend sni-router-tcp
     {{ end }}
     {{ end }}
     {{ end }}
-
 {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
 {{ range $container := $containers }}
 {{ if $container.Env.VIRTUAL_TCP_PORT }}
 backend tcpbackend_{{ $container.Name }}
     mode tcp
     {{ $address := where $container.Addresses "Port" $container.Env.VIRTUAL_TCP_PORT | first }}
-    {{ $network := index $container.Networks 0 }}
-    {{ if and $network.IP $address.Port }}
-    server server_{{ $container.Name }} {{ $network.IP }}:{{ $address.Port }} check
+    {{ range $knownNetwork := $CurrentContainer.Networks }}
+    {{ range $containerNetwork := $container.Networks }}
+    {{ if eq $knownNetwork.Name $containerNetwork.Name }}
+    server server_{{ $container.Name }} {{ $container.Name }}:{{ $address.Port }} check inter 10s resolvers docker
+    {{ end }}
+    {{ end }}
     {{ end }}
 {{ end }}
 {{ end }}
 {{ end }}
+{{ end }}
 
+
+{{ if $.Env.ROUTER_HTTP_SERVICES_PORT }}
+frontend sni-router-http-services
+    {{ range $port := split $.Env.ROUTER_HTTP_SERVICES_PORT " " }}
+    bind *:{{ $port }}
+    {{ end }}
+    mode http
+    {{ range $services, $containers := groupBy $ "Env.VIRTUAL_HTTP_SERVICES" }}
+    {{ range $container := $containers }}
+    {{ if ($container.Env.VIRTUAL_HTTP_SERVICES)}}
+    {{ range $service := split $services " " }}
+    {{ $endpoint := split $service ":" }}
+    use_backend httpbackend_{{ index $endpoint 0 }}_{{ index $endpoint 1 }} if { hdr_dom(host) -i {{ index $endpoint 0 }} }
+    {{ end }}
+    {{ end }}
+    {{ end }}
+    {{ end }}
+{{ range $services, $containers := groupBy $ "Env.VIRTUAL_HTTP_SERVICES" }}
+{{ range $container := $containers }}
+{{ if ($container.Env.VIRTUAL_HTTP_SERVICES)}}
+{{ range $service := split $services " " }}
+{{ $endpoint := split $service ":" }}
+backend httpbackend_{{ index $endpoint 0 }}_{{ index $endpoint 1 }}
+    mode http
+    {{ range $knownNetwork := $CurrentContainer.Networks }}
+    {{ range $containerNetwork := $container.Networks }}
+    {{ if eq $knownNetwork.Name $containerNetwork.Name }}
+    server server_{{ index $endpoint 0 }}_{{ index $endpoint 1 }} {{ $container.Name }}:{{ index $endpoint 1 }} check inter 10s resolvers docker
+    {{ end }}
+    {{ end }}
+    {{ end }}
+{{ end }}
+{{ end }}
+{{ end }}
+{{ end }}
 {{ end }}

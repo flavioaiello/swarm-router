@@ -1,8 +1,5 @@
 FROM alpine:3.6
 
-ARG TAG
-LABEL TAG=${TAG}
-
 COPY files /
 
 ENV DOCKER_HOST unix:///tmp/docker.sock

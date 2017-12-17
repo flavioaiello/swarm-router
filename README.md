@@ -134,24 +134,3 @@ services:
       ...
 ```
 
-## Versioning
-Versioning is an issue when deploying the latest release. For this purpose an additional label will be provided during build time. 
-The Dockerfile must be extended with an according label argument as shown below:
-```
-ARG TAG
-LABEL TAG=${TAG}
-```
-Arguments must be passed to the build process using `--build-arg TAG="${TAG}"`.
-
-## Reporting
-```
-docker inspect --format \
-&quot;{{ index .Config.Labels \&quot;com.docker.compose.project\&quot;}},\
- {{ index .Config.Labels \&quot;com.docker.compose.service\&quot;}},\
- {{ index .Config.Labels \&quot;TAG\&quot;}},\
- {{ index .State.Status }},\
- {{ printf \&quot;%.16s\&quot; .Created }},\
- {{ printf \&quot;%.16s\&quot; .State.StartedAt }},\
- {{ index .RestartCount }}&quot; $(docker ps -f name=${STAGE} -q) &gt;&gt; reports/${SHORTNAME}.report
-```
-

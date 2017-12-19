@@ -1,3 +1,7 @@
+[![Docker Build Status](https://img.shields.io/docker/build/flavioaiello/sni-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/sni-router/)
+[![Docker Stars](https://img.shields.io/docker/stars/flavioaiello/sni-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/sni-router/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/flavioaiello/sni-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/sni-router/)
+
 # SNI-Router
 Very lean dynamic traffic router based on alpine linux and haproxy, optionally with encryption passtrough based on X.509 mutual auth. For a more sophisticated setup you could either derive from this image and extend it with a replicated KVS and Keepalived or use Traefik.io.
 

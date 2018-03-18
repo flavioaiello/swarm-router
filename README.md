@@ -3,24 +3,48 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/flavioaiello/swarm-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/swarm-router/)
 
 # Swarm-Router
-True zero config docker swarm mode traffic router still based on haproxy. Does not need root privileges and even not listening on swarm events. 
-Very lean dynamic traffic router based on alpine linux optionally with encryption passtrough based on X.509 mutual auth. 
+The «true zero config» production ready ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library.
+
+Unique advantages over treafik, gobetween, sniproxy, flow-proxy and many others:
+- Zero-copy using the splice syscall allowing real gbps throughput at very low cpu
+- No root privileges required
+- No socket mount required
+- No external dependencies
 
 ## Scope
-This docker container is inspired by jwilder's nginx automatic reverse proxy and is using his docker-gen library to generate configuration files up to the actual docker runtime.
-It accomplishes the same as the mentioned reverse proxy based on nginx and solves multiple connectivity issues using haproxy instead:
-- Port overlapping on HTTP and TCP (eg. SNI on TLS)
-- End to end encryption with TLS passthrough (This is the SNI-Router part)
-- Automatic reconfiguration when further containers are spinned up or removed
-- TLS Offloading with SNI-Routing
+Solves common docker swarm mode large scale requirements:
+- Port overlapping on HTTP and TLS when publishing by service FQDN endpoint
+- TLS termination optionally with X.509 mutual auth
+- End to end encryption with TLS passthrough when using TLS encryption
+- Docker swarm mode stack isolation by swarm-router cascading
 
-## Docker stack deploy sample excerpts «.yml»
+## Getting Started
+Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites.
 
-### Standard port routing for http apps
+## Basic configuration
+The swarm-router can listen on multiple ports as shown below. Encryption can be optionally activated providing your fullchain certificate. This file should also contain your private key. Preferably this one should be mounted using docker secrets.
+```
+HTTP_PORTS=80 88 8080
+TLS_PORTS=443 8443
+TLS_CERT=/data/certs/fullchain.pem
+```
+
+### Testdrive
+A first testdrive can be made by starting the swarm-router in legacy mode by using `docker run ` as shown below:
+```
+docker run --name swarm-router -d -e HTTP_PORTS=80 -e TLS_PORTS=443 -p 80:80 -p 443:443 -p 1111:1111 flavioaiello/swarm-router
+```
+
+### Docker Swarm Mode ingress routing
 
 ```
-WIP!
-
+version
 
 ```
 
+### Docker Swarm Mode ingress routing with stack isolation
+
+
+```
+version
+```

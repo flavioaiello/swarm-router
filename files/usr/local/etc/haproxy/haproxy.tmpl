@@ -1,7 +1,6 @@
-{{ $CurrentContainer := where $ "ID" .Docker.CurrentContainerID | first }}
-
 global
     maxconn 4096
+    log /dev/log local0 warning
 
 defaults
     log global
@@ -26,108 +25,33 @@ listen stats
     bind *:1111
     mode http
     stats enable
-    stats show-desc sni-router status
+    stats show-desc swarm-router status
     stats uri /
 
-{{ if $.Env.ROUTER_HTTP_PORT }}
-frontend sni-router-http
-    {{ range $port := split $.Env.ROUTER_HTTP_PORT " " }}
-    bind *:{{ $port }}
+frontend swarm-router-http
+    {{ range $port := split $.Env.HTTP_PORTS " " }}bind *:{{ $port }}
     {{ end }}
     mode http
-    {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
-    {{ range $container := $containers }}
-    {{ if (or $container.Env.VIRTUAL_HTTP_PORT (not $container.Env.VIRTUAL_TCP_PORT))}}
-    use_backend httpbackend_{{ $container.Name }} if { hdr_dom(host) -i {{ $host }} }
-    {{ end }}
-    {{ end }}
-    {{ end }}
-{{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
-{{ range $container := $containers }}
-{{ if (or $container.Env.VIRTUAL_HTTP_PORT (not $container.Env.VIRTUAL_TCP_PORT))}}
-backend httpbackend_{{ $container.Name }}
-    mode http
-    {{ $port := coalesce $container.Env.VIRTUAL_HTTP_PORT "80" }}
-    {{ $address := where $container.Addresses "Port" $port | first }}
-    {{ range $knownNetwork := $CurrentContainer.Networks }}
-    {{ range $containerNetwork := $container.Networks }}
-    {{ if eq $knownNetwork.Name $containerNetwork.Name }}
-    server server_{{ $container.Name }} {{ $container.Name }}:{{ $address.Port }} check inter 10s resolvers docker
-    {{ end }}
-    {{ end }}
-    {{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
+    use_backend %[req.hdr(host)]
+    default_backend swarm-router-http
 
-
-{{ if $.Env.ROUTER_TCP_PORT }}
-frontend sni-router-tcp
-    {{ range $port := split $.Env.ROUTER_TCP_PORT " " }}
-    bind *:{{ $port }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}
+frontend swarm-router-tls
+    {{ range $port := split $.Env.TLS_PORTS " " }}bind *:{{ $port }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}
     {{ end }}
     mode tcp
-    tcp-request inspect-delay 5s
-    tcp-request content accept if { req.ssl_hello_type 1 }
-    {{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
-    {{ range $container := $containers }}
-    {{ if $container.Env.VIRTUAL_TCP_PORT }}
-    use_backend tcpbackend_{{ $container.Name }} if { {{ if $.Env.TLS_CERT }}ssl_fc_sni{{ else }}req.ssl_sni{{ end }} -i {{ $host }} }
-    {{ end }}
-    {{ end }}
-    {{ end }}
-{{ range $host, $containers := groupBy $ "Env.VIRTUAL_HOST" }}
-{{ range $container := $containers }}
-{{ if $container.Env.VIRTUAL_TCP_PORT }}
-backend tcpbackend_{{ $container.Name }}
+    use_backend %[{{ if $.Env.TLS_CERT }}ssl_fc_sni(){{ else }}req.ssl_sni(){{ end }}]
+    default_backend swarm-router-tls
+
+backend swarm-router-http
+    mode http
+    server server_swarm-router-http 127.0.0.1:10080 check
+
+backend swarm-router-tls
     mode tcp
-    {{ $address := where $container.Addresses "Port" $container.Env.VIRTUAL_TCP_PORT | first }}
-    {{ range $knownNetwork := $CurrentContainer.Networks }}
-    {{ range $containerNetwork := $container.Networks }}
-    {{ if eq $knownNetwork.Name $containerNetwork.Name }}
-    server server_{{ $container.Name }} {{ $container.Name }}:{{ $address.Port }} check inter 10s resolvers docker
-    {{ end }}
-    {{ end }}
-    {{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
+    server server_swarm-router-tls 127.0.0.1:10443 check
 
-
-{{ if $.Env.ROUTER_HTTP_SERVICES_PORT }}
-frontend sni-router-http-services
-    {{ range $port := split $.Env.ROUTER_HTTP_SERVICES_PORT " " }}
-    bind *:{{ $port }}
-    {{ end }}
+{{ range $index, $backend := $.Backends }}
+backend {{ $backend }}
     mode http
-    {{ range $services, $containers := groupBy $ "Env.VIRTUAL_HTTP_SERVICES" }}
-    {{ range $container := $containers }}
-    {{ if ($container.Env.VIRTUAL_HTTP_SERVICES)}}
-    {{ range $service := split $services " " }}
-    {{ $endpoint := split $service ":" }}
-    use_backend httpbackend_{{ index $endpoint 0 }}_{{ index $endpoint 1 }} if { hdr_dom(host) -i {{ index $endpoint 0 }} }
-    {{ end }}
-    {{ end }}
-    {{ end }}
-    {{ end }}
-{{ range $services, $containers := groupBy $ "Env.VIRTUAL_HTTP_SERVICES" }}
-{{ range $container := $containers }}
-{{ if ($container.Env.VIRTUAL_HTTP_SERVICES)}}
-{{ range $service := split $services " " }}
-{{ $endpoint := split $service ":" }}
-backend httpbackend_{{ index $endpoint 0 }}_{{ index $endpoint 1 }}
-    mode http
-    {{ range $knownNetwork := $CurrentContainer.Networks }}
-    {{ range $containerNetwork := $container.Networks }}
-    {{ if eq $knownNetwork.Name $containerNetwork.Name }}
-    server server_{{ index $endpoint 0 }}_{{ index $endpoint 1 }} {{ $container.Name }}:{{ index $endpoint 1 }} check inter 10s resolvers docker
-    {{ end }}
-    {{ end }}
-    {{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
-{{ end }}
+    server {{ $backend }} {{ $backend }}:8000 check inter 10s resolvers docker
 {{ end }}

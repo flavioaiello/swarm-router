@@ -73,7 +73,7 @@ func handler(downstream net.Conn) {
 func addBackend(hostname string) {
 	// Add new backend to backend memory map (ttl map pending)
 	log.Printf("Adding %s to swarm-router", hostname)
-	backends[hostname] = hostname
+	backends[hostname] = 8000
 	// Generate new haproxy configuration
 	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 	// Restart haproxy using USR2 signal

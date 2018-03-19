@@ -50,8 +50,8 @@ backend swarm-router-tls
     mode tcp
     server server_swarm-router-tls 127.0.0.1:10443 check
 
-{{ range $index, $backend := $.Backends }}
+{{ range $backend, $port := $.Backends }}
 backend {{ $backend }}
     mode http
-    server {{ $backend }} {{ $backend }}:8000 check inter 10s resolvers docker
+    server {{ $backend }} {{ $backend }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}

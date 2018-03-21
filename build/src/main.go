@@ -2,6 +2,7 @@ package main
 
 import (
   "os"
+  "strings"
 )
 
 // swarm router ports
@@ -13,8 +14,8 @@ var httpBackendsDefaultPort = getEnv("HTTP_BACKENDS_DEFAULT_PORT", "8080")
 var tlsBackendsDefaultPort = getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443")
 
 // backends port rules
-var httpBackendsPort = getEnv("HTTP_BACKENDS_PORT", "")
-var tlsBackendsPort = getEnv("TLS_BACKENDS_PORT", "")
+var httpBackendsPort = strings.Split(getEnv("HTTP_BACKENDS_PORT", ""), " ")
+var tlsBackendsPort = strings.Split(getEnv("TLS_BACKENDS_PORT", ""), " ")
 
 // Backend maps
 var httpBackends = make(map[string]int)

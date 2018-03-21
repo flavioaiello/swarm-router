@@ -63,14 +63,15 @@ func doneChan(done chan int){
 func addBackend(hostname string) {
 	// Add new backend to backend memory map (ttl map pending)
 	log.Printf("Adding %s to swarm-router", hostname)
-	httpBackends[hostname], _ = strconv.Atoi(httpBackendsDefaultPort)
-	/*scanner := bufio.NewWordScanner(os.Getenv("BACKEND_PORTS")))
-	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), hostname) {
-
+  for i := range httpBackendsPort {
+    backend := strings.Split(httpBackendsPort[i], ";")
+		if strings.HasPrefix(hostname, backend[0]) {
+			httpBackends[hostname], _ = strconv.Atoi(backend[1])
 			break
-		}
-	}*/
+		} else {
+			httpBackends[hostname], _ = strconv.Atoi(httpBackendsDefaultPort)
+	  }
+	}
 	// Generate new haproxy configuration
 	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 	// Restart haproxy using USR2 signal
@@ -88,6 +89,7 @@ func copy(dst io.WriteCloser, src io.Reader) {
 }
 
 func httpHandler(downstream net.Conn) {
+	defer	downstream.Close()
 	reader := bufio.NewReader(downstream)
 	hostname := ""
 	readLines := list.New()
@@ -145,9 +147,6 @@ func httpHandler(downstream net.Conn) {
 						go copy(upstream, reader)
 						go copy(downstream, upstream)
 						break
-					} else {
-						log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), hostname, ownIPNet)
-						downstream.Close()
 					}
 				}
 			}

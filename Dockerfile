@@ -9,7 +9,7 @@ RUN set -ex ;\
     go get -d -v -t;\
     CGO_ENABLED=0 GOOS=linux go build -v -o /files/usr/local/bin/swarm-router
 
-### Runtime build ###
+### runtime build ###
 FROM haproxy:alpine
 
 COPY files /

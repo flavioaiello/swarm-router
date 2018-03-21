@@ -94,7 +94,6 @@ func copy(dst io.WriteCloser, src io.Reader) {
 }
 
 func httpHandler(downstream net.Conn) {
-	defer	downstream.Close()
 	reader := bufio.NewReader(downstream)
 	hostname := ""
 	readLines := list.New()

@@ -104,7 +104,8 @@ func httpHandler(downstream net.Conn) {
 			break
 		}
 		if strings.HasPrefix(line, "Host: ") {
-			hostname = strings.TrimPrefix(line, "Host: ")
+			host := strings.TrimPrefix(line, "Host: ")
+			hostname, _, _ = net.SplitHostPort(host)
 			break
 		}
 	}

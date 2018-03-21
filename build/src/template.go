@@ -6,11 +6,15 @@ import (
 	"path/filepath"
 	"log"
   "strings"
+  "strconv"
 )
 
 type Config struct {
+  HttpSwarmRouterPort int
+  TlsSwarmRouterPort int
 	Env map[string]string
-  Backends map[string]int
+  HttpBackends map[string]int
+  TlsBackends map[string]int
 }
 
 func envMap() map[string]string {
@@ -32,8 +36,11 @@ func newTemplate(name string) *template.Template {
 
 func executeTemplate(tmpl string, cfg string) {
   config := new(Config)
+  config.HttpSwarmRouterPort, _ = strconv.Atoi(httpSwarmRouterPort)
+  config.TlsSwarmRouterPort, _ = strconv.Atoi(tlsSwarmRouterPort)
   config.Env = envMap()
-  config.Backends = backends
+  config.HttpBackends = httpBackends
+  config.TlsBackends = tlsBackends
 
   template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
   if err != nil {

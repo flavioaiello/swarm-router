@@ -46,14 +46,20 @@ frontend swarm-router-tls
 
 backend swarm-router-http
     mode http
-    server server_swarm-router-http 127.0.0.1:10080 check
+    server server_swarm-router-http 127.0.0.1:{{ $.HttpSwarmRouterPort }} check
 
 backend swarm-router-tls
     mode tcp
-    server server_swarm-router-tls 127.0.0.1:10443 check
+    server server_swarm-router-tls 127.0.0.1:{{ $.TlsSwarmRouterPort }} check
 
-{{ range $backend, $port := $.Backends }}
+{{ range $backend, $port := $.HttpBackends }}
 backend {{ $backend }}
     mode http
+    server {{ $backend }} {{ $backend }}:{{ $port }} check inter 10s resolvers docker
+{{ end }}
+
+{{ range $backend, $port := $.TlsBackends }}
+backend {{ $backend }}
+    mode tcp
     server {{ $backend }} {{ $backend }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}

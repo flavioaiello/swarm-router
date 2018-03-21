@@ -40,7 +40,7 @@ func haproxy() {
 
 func defaultBackend(done chan int, port int, handle func(net.Conn)) {
 	defer doneChan(done)
-	listener, err := net.Listen("tcp", "0.0.0.0:" + strconv.Itoa(port))
+	listener, err := net.Listen("tcp", "0.0.0.0:" + httpSwarmRouterPort)
 	if err != nil {
 		log.Printf("Listening error: %s", err.Error())
 		return
@@ -63,7 +63,7 @@ func doneChan(done chan int){
 func addBackend(hostname string) {
 	// Add new backend to backend memory map (ttl map pending)
 	log.Printf("Adding %s to swarm-router", hostname)
-	backends[hostname] = 8000
+	httpBackends[hostname], _ = strconv.Atoi(httpBackendsDefaultPort)
 	/*scanner := bufio.NewWordScanner(os.Getenv("BACKEND_PORTS")))
 	for scanner.Scan() {
 		if strings.HasPrefix(scanner.Text(), hostname) {
@@ -105,11 +105,14 @@ func httpHandler(downstream net.Conn) {
 		}
 		if strings.HasPrefix(line, "Host: ") {
 			hostname = strings.TrimPrefix(line, "Host: ")
+			if strings.ContainsAny(hostname, ":") {
+				hostname, _, _ = net.SplitHostPort(hostname)
+			}
 			break
 		}
 	}
 	// Check if backend was already added
-	if backends[hostname] == 0 {
+	if httpBackends[hostname] == 0 {
 		// Resolve target ip address for hostname
 		backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
 		if err != nil {

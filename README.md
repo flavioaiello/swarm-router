@@ -22,13 +22,27 @@ Solves common docker swarm mode large scale requirements:
 Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites.
 
 ## Basic configuration
-The swarm-router can listen on multiple ports as shown below. Encryption can be optionally activated providing your fullchain certificate. This file should also contain your private key. Preferably this one should be mounted using docker secrets.
+The swarm-router can listen on multiple ports as shown below. Port publishing is additionally required.
 ```
 HTTP_PORTS=80 88 8080
 TLS_PORTS=443 8443
+```
+Encryption can be optionally activated providing your fullchain certificate. This file should also contain your private key. Preferably this one should be mounted using docker secrets.
+```
 TLS_CERT=/data/certs/fullchain.pem
 ```
-
+The swarm-router default listeners do need any further configuration and work according with the default haproxy.tmpl configuration file.
+```
+HTTP_SWARM_ROUTER_PORT=10080 (default value)
+TLS_SWARM_ROUTER_PORT=10443 (default value)
+```
+The swarm-router connects the default backend port if no additional port rules are provided.
+```
+HTTP_BACKENDS_DEFAULT_PORT=8080 (default value)
+TLS_BACKENDS_DEFAULT_PORT=8443 (default value)
+HTTP_BACKENDS_PORT=startswith;9000 startswithsomethigelse;9090 (samples)
+TLS_BACKENDS_PORT=startswith;9000 startswithsomethigelse;9090 (samples)
+```
 ### Testdrive
 A first testdrive can be made by starting the swarm-router in legacy mode by using `docker run ` as shown below:
 ```

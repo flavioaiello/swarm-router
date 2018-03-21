@@ -1,10 +1,24 @@
 package main
 
 import (
-
+  "os"
 )
 
-var backends = make(map[string]int)
+// swarm router ports
+var httpSwarmRouterPort = getEnv("HTTP_SWARM_ROUTER_PORT", "10080")
+var tlsSwarmRouterPort = getEnv("TLS_SWARM_ROUTER_PORT", "10443")
+
+// backends default ports
+var httpBackendsDefaultPort = getEnv("HTTP_BACKENDS_DEFAULT_PORT", "8080")
+var tlsBackendsDefaultPort = getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443")
+
+// backends port rules
+var httpBackendsPort = getEnv("HTTP_BACKENDS_PORT", "")
+var tlsBackendsPort = getEnv("TLS_BACKENDS_PORT", "")
+
+// Backend maps
+var httpBackends = make(map[string]int)
+var tlsBackends = make(map[string]int)
 
 func main() {
 
@@ -25,4 +39,12 @@ func main() {
 	//go defaultBackend(tlsDone, 10443, tlsHandler)
 	<-httpDone
 	//<-tlsDone
+}
+
+func getEnv(key, defaultValue string) string {
+    value, exists := os.LookupEnv(key)
+    if !exists {
+        value = defaultValue
+    }
+    return value
 }

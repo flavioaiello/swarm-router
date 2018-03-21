@@ -18,7 +18,7 @@ COPY --from=build /files /
 RUN set -ex ;\
     apk update ;\
     apk upgrade ;\
-    rm -rf /var/cache/apk/*;\
+    rm -rf /var/cache/apk/* ;\
     echo "*** add haproxy system account ***" ;\
     addgroup -S haproxy ;\
     adduser -S -D -h /home/haproxy -s /bin/false -G haproxy -g "haproxy system account" haproxy ;\

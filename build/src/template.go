@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	Env map[string]string
-  Backends map[string]string
+  Backends map[string]int
 }
 
 func envMap() map[string]string {
@@ -34,7 +34,7 @@ func executeTemplate(tmpl string, cfg string) {
   config := new(Config)
   config.Env = envMap()
   config.Backends = backends
-  
+
   template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
   if err != nil {
   	log.Fatalf("Unable to parse template: %s", err)

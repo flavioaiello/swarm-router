@@ -1,5 +1,7 @@
 global
+    user haproxy
     maxconn 4096
+    master-worker
     log /dev/log local0 warning
 
 defaults

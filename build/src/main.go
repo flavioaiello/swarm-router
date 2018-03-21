@@ -4,7 +4,7 @@ import (
 
 )
 
-var backends = make(map[string]string)
+var backends = make(map[string]int)
 
 func main() {
 
@@ -15,8 +15,14 @@ func main() {
 	syslog := Syslog{}
   go syslog.run()
 
-	// Start listner
+  // Start haproxy
+  go haproxy()
+
+  // Start proxy
 	httpDone := make(chan int)
-	go listner(httpDone, 10080, handler)
+	go defaultBackend(httpDone, 10080, httpHandler)
+	//tlsDone := make(chan int)
+	//go defaultBackend(tlsDone, 10443, tlsHandler)
 	<-httpDone
+	//<-tlsDone
 }

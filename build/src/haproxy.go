@@ -9,7 +9,7 @@ import (
 	"strings"
 	"strconv"
 	"os"
-        "os/exec"
+  "os/exec"
 	"syscall"
 	"container/list"
 )
@@ -131,7 +131,7 @@ func httpHandler(downstream net.Conn) {
 					// Check if target ip is member of attached swarm networks
 					if ownIPNet.Contains(backendIPAddr.IP) {
 						addBackend(hostname)
-						upstream, err := net.Dial("tcp", hostname + ":8000")
+						upstream, err := net.Dial("tcp", hostname + ":" + httpBackendsDefaultPort)
 						if err != nil {
 							log.Printf("Backend connection error: %s", err.Error())
 							downstream.Close()

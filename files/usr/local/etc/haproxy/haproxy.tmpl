@@ -34,7 +34,7 @@ frontend swarm-router-http
     {{ range $port := split $.Env.HTTP_PORTS " " }}bind *:{{ $port }}
     {{ end }}
     mode http
-    use_backend %[req.hdr(host)]
+    use_backend %[req.hdr(host),lower,field(1,':')]
     default_backend swarm-router-http
 
 frontend swarm-router-tls

@@ -64,9 +64,9 @@ func addBackend(hostname string) {
 	// Add new backend to backend memory map (ttl map pending)
 	log.Printf("Adding %s to swarm-router", hostname)
   for i := range httpBackendsPort {
-    backend := strings.Split(httpBackendsPort[i], ";")
-		if strings.HasPrefix(hostname, backend[0]) {
-			httpBackends[hostname], _ = strconv.Atoi(backend[1])
+		backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
+		if strings.HasPrefix(hostname, backend) {
+			httpBackends[hostname], _ = strconv.Atoi(port)
 			break
 		} else {
 			httpBackends[hostname], _ = strconv.Atoi(httpBackendsDefaultPort)

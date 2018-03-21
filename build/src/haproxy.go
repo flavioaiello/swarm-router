@@ -60,18 +60,23 @@ func doneChan(done chan int){
 	done <- 1
 }
 
-func addBackend(hostname string) {
-	// Add new backend to backend memory map (ttl map pending)
-	log.Printf("Adding %s to swarm-router", hostname)
-  for i := range httpBackendsPort {
+getBackendPort(hostname string)int{
+	backendPort := 0
+	for i := range httpBackendsPort {
 		backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
 		if strings.HasPrefix(hostname, backend) {
-			httpBackends[hostname], _ = strconv.Atoi(port)
+			backendPort, _ = strconv.Atoi(port)
 			break
-		} else {
-			httpBackends[hostname], _ = strconv.Atoi(httpBackendsDefaultPort)
-	  }
+		}
+		backendPort, _ = strconv.Atoi(httpBackendsDefaultPort)
 	}
+	return backendPort
+}
+
+func addBackend(hostname string){
+	// Add new backend to backend memory map (ttl map pending)
+	log.Printf("Adding %s to swarm-router", hostname)
+	httpBackends[hostname] = getBackendPort(hostname)
 	// Generate new haproxy configuration
 	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 	// Restart haproxy using USR2 signal
@@ -133,7 +138,7 @@ func httpHandler(downstream net.Conn) {
 					// Check if target ip is member of attached swarm networks
 					if ownIPNet.Contains(backendIPAddr.IP) {
 						addBackend(hostname)
-						upstream, err := net.Dial("tcp", hostname + ":" + httpBackendsDefaultPort)
+						upstream, err := net.Dial("tcp", hostname + ":" + getBackendPort(hostname))
 						if err != nil {
 							log.Printf("Backend connection error: %s", err.Error())
 							downstream.Close()

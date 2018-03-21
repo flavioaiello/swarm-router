@@ -60,7 +60,7 @@ func doneChan(done chan int){
 	done <- 1
 }
 
-getBackendPort(hostname string)int{
+func getBackendPort(hostname string) int {
 	backendPort := 0
 	for i := range httpBackendsPort {
 		backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
@@ -138,7 +138,7 @@ func httpHandler(downstream net.Conn) {
 					// Check if target ip is member of attached swarm networks
 					if ownIPNet.Contains(backendIPAddr.IP) {
 						addBackend(hostname)
-						upstream, err := net.Dial("tcp", hostname + ":" + getBackendPort(hostname))
+						upstream, err := net.Dial("tcp", hostname + ":" + strconv.Itoa(getBackendPort(hostname)))
 						if err != nil {
 							log.Printf("Backend connection error: %s", err.Error())
 							downstream.Close()

@@ -4,6 +4,7 @@ import (
   "os"
   "strings"
   "strconv"
+  "sync"
 )
 
 // swarm router ports
@@ -23,8 +24,14 @@ var dnsBackendSuffix = getEnv("DNS_BACKEND_SUFFIX", "")
 var dnsBackendFqdn, err = strconv.ParseBool(getEnv("DNS_BACKEND_FQDN", "true"))
 
 // Backend maps
-var httpBackends = make(map[string]int)
-var tlsBackends = make(map[string]int)
+var (
+	httpBackends = make(map[string]int)
+	httpBackendsLock sync.RWMutex
+)
+var (
+	tlsBackends = make(map[string]int)
+	tlsBackendsLock sync.RWMutex
+)
 
 func main() {
 

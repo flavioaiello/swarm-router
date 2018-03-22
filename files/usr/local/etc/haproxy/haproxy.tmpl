@@ -61,5 +61,5 @@ backend {{ $backend }}
 {{ range $backend, $port := $.TlsBackends }}
 backend {{ $backend }}
     mode tcp
-    server {{ $backend }} {{ $backend }}:{{ $port }} check inter 10s resolvers docker
+    server {{ $backend }} {{ $backend }}{{ if $.Env.DNS_SUFFIX }}.{{ $.Env.DNS_SUFFIX }}{{ end }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}

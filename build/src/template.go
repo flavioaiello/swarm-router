@@ -16,6 +16,7 @@ type Config struct {
   HttpBackends map[string]int
   TlsBackends map[string]int
   DnsBackendSuffix string
+  DnsBackendFqdn bool
 }
 
 func envMap() map[string]string {
@@ -43,6 +44,7 @@ func executeTemplate(tmpl string, cfg string) {
   config.HttpBackends = httpBackends
   config.TlsBackends = tlsBackends
   config.DnsBackendSuffix = dnsBackendSuffix
+  config.DnsBackendFqdn, _ = strconv.ParseBool(dnsBackendFqdn)
 
   template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
   if err != nil {

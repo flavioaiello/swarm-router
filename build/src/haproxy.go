@@ -152,6 +152,7 @@ func httpHandler(downstream net.Conn) {
 						go copy(downstream, upstream)
 						break
 					}
+					downstream.Close()
 				}
 			}
 		}

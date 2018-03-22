@@ -46,11 +46,11 @@ frontend swarm-router-tls
 
 backend swarm-router-http
     mode http
-    server server_swarm-router-http 127.0.0.1:{{ $.HttpSwarmRouterPort }} check
+    server swarm-router-http 127.0.0.1:{{ $.HttpSwarmRouterPort }} check
 
 backend swarm-router-tls
     mode tcp
-    server server_swarm-router-tls 127.0.0.1:{{ $.TlsSwarmRouterPort }} check
+    server swarm-router-tls 127.0.0.1:{{ $.TlsSwarmRouterPort }} check
 
 {{ range $backend, $port := $.HttpBackends }}
 backend {{ $backend }}

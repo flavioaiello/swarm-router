@@ -12,9 +12,10 @@ import (
 type Config struct {
   HttpSwarmRouterPort int
   TlsSwarmRouterPort int
-	Env map[string]string
+  Env map[string]string
   HttpBackends map[string]int
   TlsBackends map[string]int
+  DnsBackendSuffix string
 }
 
 func envMap() map[string]string {
@@ -41,6 +42,7 @@ func executeTemplate(tmpl string, cfg string) {
   config.Env = envMap()
   config.HttpBackends = httpBackends
   config.TlsBackends = tlsBackends
+  config.DnsBackendSuffix = dnsBackendSuffix
 
   template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
   if err != nil {

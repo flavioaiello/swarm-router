@@ -17,6 +17,9 @@ var tlsBackendsDefaultPort = getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443")
 var httpBackendsPort = strings.Split(getEnv("HTTP_BACKENDS_PORT", ""), " ")
 var tlsBackendsPort = strings.Split(getEnv("TLS_BACKENDS_PORT", ""), " ")
 
+// backend dns suffix
+var dnsBackendSuffix = getEnv("DNS_BACKEND_SUFFIX", "")
+
 // Backend maps
 var httpBackends = make(map[string]int)
 var tlsBackends = make(map[string]int)

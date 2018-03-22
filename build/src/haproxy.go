@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-rate := time.Second
-throttle := time.Tick(rate)
+var rate = time.Second
+var throttle = time.Tick(rate)
 
 var pid int = 0
 

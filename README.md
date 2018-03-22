@@ -52,7 +52,46 @@ docker run --name swarm-router -d -e HTTP_PORTS=80 -e TLS_PORTS=443 -p 80:80 -p 
 ### Docker Swarm Mode ingress routing
 
 ```
-version
+version: '3'
+
+services:
+
+  swarm-router:
+    build: swarm-router/.
+    environment:
+      - HTTP_PORTS=80
+      - TLS_PORTS=443
+      - HTTP_BACKENDS_PORT=nexus:8081 whoami:8000 portainer:9000
+    ports:
+      - "80:80"
+      - "443:443"
+      - "1111:1111"
+    networks:
+      default:
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+        limits:
+          memory: 16M
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
+        
+  whoami:
+    image: jwilder/whoami:latest
+    networks:
+      default:
+        aliases:
+          - whoami.vcap.me
+
+networks:
+  default:
+    driver: overlay
 
 ```
 
@@ -62,3 +101,8 @@ version
 ```
 version
 ```
+
+## Todos
+- [ ] add ttl to backends
+- [ ] add tls (sni)
+- [ ] autocerts

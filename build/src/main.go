@@ -3,6 +3,7 @@ package main
 import (
   "os"
   "strings"
+  "strconv"
 )
 
 // swarm router ports
@@ -19,7 +20,7 @@ var tlsBackendsPort = strings.Split(getEnv("TLS_BACKENDS_PORT", ""), " ")
 
 // backend dns modes
 var dnsBackendSuffix = getEnv("DNS_BACKEND_SUFFIX", "")
-var dnsBackendFqdn = getEnv("DNS_BACKEND_FQDN", "true")
+var dnsBackendFqdn, err = strconv.ParseBool(getEnv("DNS_BACKEND_FQDN", "true"))
 
 // Backend maps
 var httpBackends = make(map[string]int)

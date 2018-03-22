@@ -40,7 +40,7 @@ func haproxy() {
 
 func defaultBackend(done chan int, port int, handle func(net.Conn)) {
 	defer doneChan(done)
-	listener, err := net.Listen("tcp", "0.0.0.0:" + httpSwarmRouterPort)
+	listener, err := net.Listen("tcp", "127.0.0.1:" + httpSwarmRouterPort)
 	if err != nil {
 		log.Printf("Listening error: %s", err.Error())
 		return
@@ -132,28 +132,26 @@ func httpHandler(downstream net.Conn) {
 				return
 		}
 		for _, ownIPAddr := range ownIPAddrs {
-			if ownIPNet, ok := ownIPAddr.(*net.IPNet); ok && !ownIPNet.IP.IsLoopback() {
-				if ownIPNet.IP.To4() != nil {
-					// Check if target ip is member of attached swarm networks
-					if ownIPNet.Contains(backendIPAddr.IP) {
-						addBackend(hostname)
-						upstream, err := net.Dial("tcp", hostname + ":" + strconv.Itoa(getBackendPort(hostname)))
-						if err != nil {
-							log.Printf("Backend connection error: %s", err.Error())
-							downstream.Close()
-							return
-						}
-						for element := readLines.Front(); element != nil; element = element.Next() {
-							line := element.Value.(string)
-							upstream.Write([]byte(line))
-							upstream.Write([]byte("\n"))
-						}
-						go copy(upstream, reader)
-						go copy(downstream, upstream)
-						break
+			if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
+				// Check if target ip is member of attached swarm networks
+				if ownIPNet.Contains(backendIPAddr.IP) {
+					addBackend(hostname)
+					upstream, err := net.Dial("tcp", hostname + ":" + strconv.Itoa(getBackendPort(hostname)))
+					if err != nil {
+						log.Printf("Backend connection error: %s", err.Error())
+						downstream.Close()
+						return
 					}
-					downstream.Close()
+					for element := readLines.Front(); element != nil; element = element.Next() {
+						line := element.Value.(string)
+						upstream.Write([]byte(line))
+						upstream.Write([]byte("\n"))
+					}
+					go copy(upstream, reader)
+					go copy(downstream, upstream)
+					break
 				}
+				downstream.Close()
 			}
 		}
 	}

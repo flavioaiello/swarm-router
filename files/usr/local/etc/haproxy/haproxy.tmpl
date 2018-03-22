@@ -55,11 +55,11 @@ backend swarm-router-tls
 {{ range $backend, $port := $.HttpBackends }}
 backend {{ $backend }}
     mode http
-    server {{ $backend }} {{ if $DnsBackendFqdn }}{{ $backend }}{{ else }}{{ $backend }}{{ end }}{{ $.DnsBackendSuffix }}:{{ $port }} check inter 10s resolvers docker
+    server {{ $backend }} {{ if $DnsBackendFqdn }}{{ $backend }}{{ else }}{{ (split $backend ".")[0] }}{{ end }}{{ $.DnsBackendSuffix }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}
 
 {{ range $backend, $port := $.TlsBackends }}
 backend {{ $backend }}
     mode tcp
-    server {{ $backend }} {{ if $DnsBackendFqdn }}{{ $backend }}{{ else }}{{ $backend }}{{ end }}{{ $.DnsBackendSuffix }}:{{ $port }} check inter 10s resolvers docker
+    server {{ $backend }} {{ if $DnsBackendFqdn }}{{ $backend }}{{ else }}{{ (split $backend ".")[0] }}{{ end }}{{ $.DnsBackendSuffix }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}

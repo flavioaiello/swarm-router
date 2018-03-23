@@ -3,7 +3,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/flavioaiello/swarm-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/swarm-router/)
 
 # Swarm-Router
-The «true zero config» production ready ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library.
+The «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang.
 
 Unique advantages over treafik, gobetween, sniproxy, flow-proxy and many others:
 - Zero-copy using the splice syscall allowing real gbps throughput at very low cpu

@@ -47,7 +47,7 @@ For intrastack communication you can either use the service short names or defin
 
 ## Configuration
 
-### Listeners
+### Listeners
 
 HTTP and TLS ports describe a set of listening sockets accepting client connections.
 ```

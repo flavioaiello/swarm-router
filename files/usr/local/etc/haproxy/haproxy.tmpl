@@ -56,12 +56,14 @@ backend swarm-router-tls
     mode tcp
     server swarm-router-tls 127.0.0.1:{{ $.TlsSwarmRouterPort }} check
 
-{{ range $backend, $port := $.HttpBackends }}backend {{ $backend }}
+{{ range $backend, $port := $.HttpBackends }}
+backend {{ $backend }}
     mode http
     server {{ $backend }} {{ getBackend $backend }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}
 
-{{ range $backend, $port := $.TlsBackends }}backend {{ $backend }}
+{{ range $backend, $port := $.TlsBackends }}
+backend {{ $backend }}
     mode tcp
     server {{ $backend }} {{ getBackend $backend }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}

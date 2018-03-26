@@ -1,7 +1,6 @@
 [![Docker Build Status](https://img.shields.io/docker/build/flavioaiello/swarm-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/swarm-router/)
 [![Docker Stars](https://img.shields.io/docker/stars/flavioaiello/swarm-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/swarm-router/)
 [![Docker Pulls](https://img.shields.io/docker/pulls/flavioaiello/swarm-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/swarm-router/)
-
 # Swarm-Router
 The «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang.
 
@@ -17,6 +16,11 @@ Solves common docker swarm mode large scale requirements:
 - TLS termination optionally with X.509 mutual auth
 - End to end encryption with TLS passthrough when using TLS encryption
 - Docker swarm mode stack isolation by swarm-router cascading
+
+## Demo
+[![Try in PWD](https://cdn.rawgit.com/play-with-docker/stacks/cff22438/assets/images/button.png)](http://play-with-docker.com?stack=https://raw.githubusercontent.com/flavioaiello/swarm-router/master/docker-compose.yml) 
+
+Deploys Swarm-router to play-with-docker sandbox.
 
 ## Getting Started
 Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites.

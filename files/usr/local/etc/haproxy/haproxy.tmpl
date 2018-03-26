@@ -1,5 +1,6 @@
 global
     user haproxy
+    group haproxy
     maxconn 4096
     master-worker
     log /dev/log local0 warning
@@ -30,16 +31,14 @@ listen stats
     stats show-desc swarm-router status
     stats uri /
 
-frontend swarm-router-http
-    {{ range $port := split $.Env.HTTP_PORTS " " }}bind *:{{ $port }}
-    {{ end }}
+frontend swarm-router-http{{ range $port := split $.Env.HTTP_PORTS " " }}
+    bind *:{{ $port }}{{ end }}
     mode http
     use_backend %[req.hdr(host),lower,field(1,':')]
     default_backend swarm-router-http
 
-frontend swarm-router-tls
-    {{ range $port := split $.Env.TLS_PORTS " " }}bind *:{{ $port }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}
-    {{ end }}
+frontend swarm-router-tls{{ range $port := split $.Env.TLS_PORTS " " }}
+    bind *:{{ $port }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}{{ end }}
     mode tcp
     use_backend %[{{ if $.Env.TLS_CERT }}ssl_fc_sni(){{ else }}req.ssl_sni(){{ end }}]
     default_backend swarm-router-tls
@@ -52,14 +51,12 @@ backend swarm-router-tls
     mode tcp
     server swarm-router-tls 127.0.0.1:{{ $.TlsSwarmRouterPort }} check
 
-{{ range $backend, $port := $.HttpBackends }}
-backend {{ $backend }}
+{{ range $backend, $port := $.HttpBackends }}backend {{ $backend }}
     mode http
     server {{ $backend }} {{ getBackend $backend }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}
 
-{{ range $backend, $port := $.TlsBackends }}
-backend {{ $backend }}
+{{ range $backend, $port := $.TlsBackends }}backend {{ $backend }}
     mode tcp
     server {{ $backend }} {{ getBackend $backend }}:{{ $port }} check inter 10s resolvers docker
 {{ end }}

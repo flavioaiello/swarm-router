@@ -26,16 +26,6 @@ func envMap() map[string]string {
   return m
 }
 
-func getBackend(hostname string) string {
-  if !dnsBackendFqdn {
-    hostname = strings.Split(hostname, ".")[0]
-  }
-  if dnsBackendSuffix != "" {
-    hostname = hostname + dnsBackendSuffix
-  }
-  return hostname
-}
-
 func newTemplate(name string) *template.Template {
   tmpl := template.New(name).Funcs(template.FuncMap{
     "split": strings.Split,

@@ -40,6 +40,7 @@ func haproxy() {
 	go func() {
 		_, _ = io.Copy(stderr, stderrPipe)
 	}()
+	err = cmd.Wait()
 }
 
 func defaultBackend(done chan int, port int, handle func(net.Conn)) {
@@ -62,6 +63,16 @@ func defaultBackend(done chan int, port int, handle func(net.Conn)) {
 
 func doneChan(done chan int){
 	done <- 1
+}
+
+func getBackend(hostname string) string {
+  if !dnsBackendFqdn {
+    hostname = strings.Split(hostname, ".")[0]
+  }
+  if dnsBackendSuffix != "" {
+    hostname = hostname + dnsBackendSuffix
+  }
+  return hostname
 }
 
 func getBackendPort(hostname string) int {
@@ -158,10 +169,8 @@ func httpHandler(downstream net.Conn) {
 				if httpBackends[hostname] == 0 {
 					go addBackend(hostname)
 				}
-				return
 			}
 			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), hostname, ownIPNet)
-			downstream.Close()
 		}
 	}
 }

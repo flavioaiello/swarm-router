@@ -22,7 +22,7 @@ RUN set -ex ;\
     echo "*** add haproxy system account ***" ;\
     addgroup -S haproxy ;\
     adduser -S -D -h /home/haproxy -s /bin/false -G haproxy -g "haproxy system account" haproxy ;\
-    chown -R haproxy /home/haproxy
+    chown -R haproxy:haproxy /home/haproxy
 
 EXPOSE 80 443 1111
 

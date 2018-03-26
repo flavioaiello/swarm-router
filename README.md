@@ -20,7 +20,7 @@ Solves common docker swarm mode large scale requirements:
 ## Getting started
 
 ### Ingress routing
-The simplest use case is to spinnup one swarm-router for serice name based routing up and running.
+The simplest use case is to spin-up one swarm-router per docker swarm mode cluster.
 
 Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portainer for your convenience) up and running. Your services can be exposed by simply add a network alias name in case they are listening on port 8080. In any other case you can eighter switch the default port or override based on a namepatter like startswith:<port>.
 

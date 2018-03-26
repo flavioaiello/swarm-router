@@ -26,8 +26,10 @@ func haproxy() {
 	stderrPipe, _ := cmd.StderrPipe()
 	if err := cmd.Start(); err != nil {
 		log.Printf("Failed to start haproxy: %s", err.Error())
+		os.Exit(1)
 	}
 	pid = cmd.Process.Pid
+  log.Printf("haproxy start pid: %d", pid)
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	stdout := io.MultiWriter(os.Stdout, &stdoutBuf)
@@ -41,6 +43,7 @@ func haproxy() {
 		_, _ = io.Copy(stderr, stderrPipe)
 	}()
 	err = cmd.Wait()
+	os.Exit(0)
 }
 
 func defaultBackend(done chan int, port int, handle func(net.Conn)) {

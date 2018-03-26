@@ -17,105 +17,72 @@ Solves common docker swarm mode large scale requirements:
 - End to end encryption with TLS passthrough when using TLS encryption
 - Docker swarm mode stack isolation by swarm-router cascading
 
-## Demo
-To get a basic understanding three compose files are provided for two use cases:
+## Getting started
 
-### Swarm routing
-Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portainer for your convenience) up and running.
+### Ingress routing
+The simplest use case is to spinnup one swarm-router for serice name based routing up and running.
 
-### Swarm routing with stack isolation
-To have the swarm-router (and portainer for your convenience) and two workload stacks up and running execute as follows:
+Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portainer for your convenience) up and running. Your services can be exposed by simply add a network alias name in case they are listening on port 8080. In any other case you can eighter switch the default port or override based on a namepatter like startswith:<port>.
+
+```
+...
+  myservice:
+...
+    networks:
+      default:
+        aliases:
+          - myservices.vcap.me
+```
+
+### Ingress routing with stack isolation
+Providing an additional swarm-router offers isolation, thus the ability to deploy the same stack with different service names multiple times:
 ```
 docker-compose up -d -f swarm.yml
 docker-compose up -d -f stack-a.yml
 docker-compose up -d -f stack-b.yml
 ```
+Your services can be exposed by simply adding network alias names in case they are listening on port 8080 on stack level swarm-router. In any other case you can eighter switch the default port or override based on a name pattern like startswith:<port>.
+For intrastack communication you can either use the service short names or define more short named aliases
 
 ## Getting Started
 Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites. The above use cases are made by single swarm-router instance for simple use-cases eg. in cascading mode to isolate stacks from each other.
 
-## Basic configuration
-The swarm-router can listen on multiple ports as shown below. Port publishing is additionally required.
+## Configuration
+### Listener
+HTTP and TLS ports describe a set of listening sockets accepting client connections.
 ```
 HTTP_PORTS=80 88 8080
 TLS_PORTS=443 8443
 ```
+### Backends
+
+#### Default ports
+The default port for all backends which the router will connect and forward incoming connections.
+```
+HTTP_BACKENDS_DEFAULT_PORT=8080 (default: can be overriden)
+TLS_BACKENDS_DEFAULT_PORT=8443 (default: can be overriden)
+```
+#### Specific ports
+Additional port for backends which will partly match the FQDN the router will connect and forward incoming connections.
+```
+HTTP_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
+TLS_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
+```
+#### Todos
+- [ ] add ttl to backends
+
+#### Insights
+If no backends are known to handle the request, but the FQDN is propagated by swarm, the connection will be forwarded to the swarm-router service listeners. The swarm-router default listeners do need any further configuration and work according with the default haproxy.tmpl configuration file.
+```
+HTTP_SWARM_ROUTER_PORT=10080 (default)
+TLS_SWARM_ROUTER_PORT=10443 (default)
+```
+### TLS Encryption
+#### Termination
 Encryption can be optionally activated providing your fullchain certificate. This file should also contain your private key. Preferably this one should be mounted using docker secrets.
 ```
 TLS_CERT=/data/certs/fullchain.pem
 ```
-The swarm-router default listeners do need any further configuration and work according with the default haproxy.tmpl configuration file.
-```
-HTTP_SWARM_ROUTER_PORT=10080 (default value)
-TLS_SWARM_ROUTER_PORT=10443 (default value)
-```
-The swarm-router connects the default backend port if no additional port rules are provided.
-```
-HTTP_BACKENDS_DEFAULT_PORT=8080 (default value)
-TLS_BACKENDS_DEFAULT_PORT=8443 (default value)
-HTTP_BACKENDS_PORT=startswith;9000 startswithsomethigelse;9090 (samples)
-TLS_BACKENDS_PORT=startswith;9000 startswithsomethigelse;9090 (samples)
-```
-### Testdrive
-A first testdrive can be made by starting the swarm-router in legacy mode by using `docker run ` as shown below:
-```
-docker run --name swarm-router -d -e HTTP_PORTS=80 -e TLS_PORTS=443 -p 80:80 -p 443:443 -p 1111:1111 flavioaiello/swarm-router
-```
-
-### Docker Swarm Mode ingress routing
-
-```
-version: '3'
-
-services:
-
-  swarm-router:
-    build: swarm-router/.
-    environment:
-      - HTTP_PORTS=80
-      - TLS_PORTS=443
-      - HTTP_BACKENDS_PORT=nexus:8081 whoami:8000 portainer:9000
-    ports:
-      - "80:80"
-      - "443:443"
-      - "1111:1111"
-    networks:
-      default:
-    deploy:
-      resources:
-        reservations:
-          cpus: '0.05'
-          memory: 16M
-        limits:
-          memory: 16M
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 10
-
-  whoami:
-    image: jwilder/whoami:latest
-    networks:
-      default:
-        aliases:
-          - whoami.vcap.me
-
-networks:
-  default:
-    driver: overlay
-
-```
-
-### Docker Swarm Mode ingress routing with stack isolation
-
-
-```
-version
-```
-
-## Todos
-- [ ] add ttl to backends
-- [ ] add tls (sni)
-- [ ] autocerts
+#### Todos
+- [ ] add tls (sni) passthrough
+- [ ] add termination with ACME autocerts

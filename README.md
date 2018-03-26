@@ -21,7 +21,7 @@ Solves common docker swarm mode large scale requirements:
 To get a basic understanding three compose files are provided for two use cases:
 
 ### Swarm routing
-Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portainer for you convenience) up and running.
+Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portainer for your convenience) up and running.
 
 ### Swarm routing with stack isolation
 To have the swarm-router (and portainer for your convenience) and two workload stacks up and running execute as follows:

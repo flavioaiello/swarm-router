@@ -17,11 +17,6 @@ Solves common docker swarm mode large scale requirements:
 - End to end encryption with TLS passthrough when using TLS encryption
 - Docker swarm mode stack isolation by swarm-router cascading
 
-## Demo
-[![Try in PWD](https://cdn.rawgit.com/play-with-docker/stacks/cff22438/assets/images/button.png)](http://play-with-docker.com?stack=https://raw.githubusercontent.com/flavioaiello/swarm-router/master/docker-compose.yml) 
-
-Deploys Swarm-router to play-with-docker sandbox.
-
 ## Getting Started
 Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites.
 
@@ -85,7 +80,7 @@ services:
         condition: any
         delay: 5s
         max_attempts: 10
-        
+
   whoami:
     image: jwilder/whoami:latest
     networks:

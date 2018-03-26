@@ -17,8 +17,22 @@ Solves common docker swarm mode large scale requirements:
 - End to end encryption with TLS passthrough when using TLS encryption
 - Docker swarm mode stack isolation by swarm-router cascading
 
+## Demo
+To get a basic understanding three compose files are provided for two use cases:
+
+### Swarm routing
+Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portainer for you convenience) up and running.
+
+### Swarm routing with stack isolation
+To have the swarm-router (and portainer for your convenience) and two workload stacks up and running execute as follows:
+```
+docker-compose up -d -f swarm.yml
+docker-compose up -d -f stack-a.yml
+docker-compose up -d -f stack-b.yml
+```
+
 ## Getting Started
-Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites.
+Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites. The above use cases are made by single swarm-router instance for simple use-cases eg. in cascading mode to isolate stacks from each other.
 
 ## Basic configuration
 The swarm-router can listen on multiple ports as shown below. Port publishing is additionally required.

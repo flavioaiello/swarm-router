@@ -46,12 +46,15 @@ Your services can be exposed by simply adding network alias names in case they a
 For intrastack communication you can either use the service short names or define more short named aliases
 
 ## Configuration
-### Listener
+
+### Listeners
+
 HTTP and TLS ports describe a set of listening sockets accepting client connections.
 ```
 HTTP_PORTS=80 88 8080
 TLS_PORTS=443 8443
 ```
+
 ### Backends
 
 #### Default ports

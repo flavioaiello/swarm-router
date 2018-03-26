@@ -60,8 +60,8 @@ TLS_PORTS=443 8443
 #### Default ports
 The default port for all backends which the router will connect and forward incoming connections.
 ```
-HTTP_BACKENDS_DEFAULT_PORT=8080 (default: can be overriden)
-TLS_BACKENDS_DEFAULT_PORT=8443 (default: can be overriden)
+HTTP_BACKENDS_DEFAULT_PORT=8080
+TLS_BACKENDS_DEFAULT_PORT=8443
 ```
 #### Specific ports
 Additional port for backends which will partly match the FQDN the router will connect and forward incoming connections.
@@ -73,7 +73,7 @@ TLS_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090
 - [ ] add ttl to backends
 
 #### Insights
-If no backends are known to handle the request, but the FQDN is propagated by swarm, the connection will be forwarded to the swarm-router service listeners. The swarm-router default listeners do need any further configuration and work according with the default haproxy.tmpl configuration file.
+If no backends are known to handle the request, but the FQDN is propagated by swarm, the connection will be forwarded to the swarm-router service listeners. The swarm-router default listeners do NO need any further configuration and will propagated to the default haproxy.tmpl configuration file.
 ```
 HTTP_SWARM_ROUTER_PORT=10080 (default)
 TLS_SWARM_ROUTER_PORT=10443 (default)

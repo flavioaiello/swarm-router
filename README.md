@@ -2,9 +2,8 @@
 [![Docker Stars](https://img.shields.io/docker/stars/flavioaiello/swarm-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/swarm-router/)
 [![Docker Pulls](https://img.shields.io/docker/pulls/flavioaiello/swarm-router.svg?style=for-the-badge)](https://hub.docker.com/r/flavioaiello/swarm-router/)
 # Swarm-Router
-The «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang.
+The «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang offering unique advantages:
 
-Unique advantages over treafik, gobetween, sniproxy, flow-proxy and many others:
 - Zero-copy using the splice syscall allowing real gbps throughput at very low cpu
 - No root privileges required
 - No socket mount required
@@ -16,6 +15,12 @@ Solves common docker swarm mode large scale requirements:
 - TLS termination optionally with X.509 mutual auth
 - End to end encryption with TLS passthrough when using TLS encryption
 - Docker swarm mode stack isolation by swarm-router cascading
+
+## Docker Swarm Mode 1.12+
+Built for docker swarm mode ingress networking: Secure service discovery using fqdn forwarding with dns resolution based on  embedded dns. Therefore there is no need to mount the docker socket and maintain labels on compose recipe. Just define your fully qualified service names per network as shown in the sample excerpts below.
+
+## Performance
+This one is built for high throughput and little CPU usage. Haproxy implements zero-copy and tcp-splicing based TCP handling. Golang based projects are lacking on those feature support: https://github.com/golang/go/issues/10948. (All golang based projects like Traefik etc. are also affected)
 
 ## Getting started
 Common docker swarm mode requirements can be accomplished by combining different swarm-router capabilites. The main use cases are made by single swarm-router instance or in cascading mode to isolate stacks from each other.

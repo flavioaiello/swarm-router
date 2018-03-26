@@ -18,6 +18,7 @@ Solves common docker swarm mode large scale requirements:
 - Docker swarm mode stack isolation by swarm-router cascading
 
 ## Getting started
+Common docker swarm mode requirements can be accomplished by combining different swarm-router capabilites. The main use cases are made by single swarm-router instance or in cascading mode to isolate stacks from each other.
 
 ### Ingress routing
 The simplest use case is to spin-up one swarm-router per docker swarm mode cluster.
@@ -43,9 +44,6 @@ docker-compose up -d -f stack-b.yml
 ```
 Your services can be exposed by simply adding network alias names in case they are listening on port 8080 on stack level swarm-router. In any other case you can eighter switch the default port or override based on a name pattern like startswith:<port>.
 For intrastack communication you can either use the service short names or define more short named aliases
-
-## Getting Started
-Common docker swarm mode platform requirements can be accomplished by combining different swarm-router capabilites. The above use cases are made by single swarm-router instance for simple use-cases eg. in cascading mode to isolate stacks from each other.
 
 ## Configuration
 ### Listener

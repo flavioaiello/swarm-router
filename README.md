@@ -58,7 +58,6 @@ TLS_PORTS=443 8443
 ### Backends
 
 #### Default ports
-
 The default port for all backends which the router will connect and forward incoming connections.
 ```
 HTTP_BACKENDS_DEFAULT_PORT=8080 (default: can be overriden)

@@ -58,6 +58,28 @@ func haproxy() {
   os.Exit(0)
 }
 
+func reload(){
+  <-throttle
+  if !reflect.DeepEqual(tempHttpBackends, httpBackends){
+    tempHttpBackendsLock.Lock()
+    for key, value := range httpBackends {
+      tempHttpBackends[key] = value
+    }
+    tempHttpBackendsLock.Unlock()
+
+    // Generate new haproxy configuration
+    executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
+
+    // Restart haproxy using USR2 signal
+    log.Printf("Pid: %d", pid)
+    proc, err := os.FindProcess(pid)
+    if err != nil {
+      log.Printf(err.Error())
+    }
+    proc.Signal(syscall.SIGUSR2)
+  }
+}
+
 func defaultBackend(done chan int, port int, handle func(net.Conn)) {
   defer doneChan(done)
   listener, err := net.Listen("tcp", "127.0.0.1:" + httpSwarmRouterPort)
@@ -109,27 +131,7 @@ func addBackend(hostname string){
   httpBackendsLock.Lock()
   httpBackends[hostname] = getBackendPort(hostname)
   httpBackendsLock.Unlock()
-
-  <-throttle
-  if !reflect.DeepEqual(tempHttpBackends, httpBackends){
-    tempHttpBackendsLock.Lock()
-    for key, value := range httpBackends {
-      tempHttpBackends[key] = value
-    }
-    tempHttpBackendsLock.Unlock()
-
-    // Generate new haproxy configuration
-    executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-
-    // Restart haproxy using USR2 signal
-    log.Printf("Pid: %d", pid)
-    proc, err := os.FindProcess(pid)
-    if err != nil {
-      log.Printf(err.Error())
-    }
-    proc.Signal(syscall.SIGUSR2)
-  }
-
+  go reload()
 }
 
 func copy(dst io.WriteCloser, src io.Reader) {

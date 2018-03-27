@@ -3,7 +3,6 @@ package main
 import (
   "bytes"
   "io"
-  "fmt"
   "bufio"
   "log"
   "net"

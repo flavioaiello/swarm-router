@@ -40,7 +40,6 @@ func run(program string, args ...string) string {
   if err != nil {
       log.Printf("Error: %s", err.Error())
       log.Printf("Stderr: %s", stderr.String())
-      os.Exit(1)
   }
   return stdout.String()
 }
@@ -50,7 +49,7 @@ func haproxy() {
 }
 
 func getPids() string {
-  return strings.Trim(strings.Replace(fmt.Sprint(run("pidof","haproxy")), " ", " ", -1), "[]")
+  return strings.TrimSpace(run("pidof","haproxy"))
 }
 
 func reload(){

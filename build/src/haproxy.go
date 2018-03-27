@@ -10,7 +10,6 @@ import (
   "strconv"
   "os"
   "os/exec"
-  "syscall"
   "container/list"
   "time"
   "reflect"
@@ -30,32 +29,28 @@ var (
   tempTlsBackendsLock sync.RWMutex
 )
 
-var pid int = 0
+func run(program string, args ...string) string {
+  var stdout, stderr bytes.Buffer
+  cmd := exec.Command(program, args...)
+  cmd.Stdin = os.Stdin;
+  cmd.Stdout = &stdout;
+  cmd.Stderr = &stderr;
+  err := cmd.Run()
+  if err != nil {
+      log.Printf("Error: %s", err.Error())
+      log.Printf("Stderr: %s", stderr.String())
+      os.Exit(1)
+  }
+  return stdout.String()
+}
 
 func haproxy() {
-  cmd := exec.Command("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg")
-  stdoutPipe, _ := cmd.StdoutPipe()
-  stderrPipe, _ := cmd.StderrPipe()
-  if err := cmd.Start(); err != nil {
-    log.Printf("Failed to start haproxy: %s", err.Error())
-    os.Exit(1)
-  }
-  pid = cmd.Process.Pid
-        log.Printf("haproxy start pid: %d", pid)
+  stdout := run("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg")
+  log.Printf("Starting haproxy: %s", stdout)
+}
 
-  var stdoutBuf, stderrBuf bytes.Buffer
-  stdout := io.MultiWriter(os.Stdout, &stdoutBuf)
-  stderr := io.MultiWriter(os.Stderr, &stderrBuf)
-
-  go func() {
-    _, _ = io.Copy(stdout, stdoutPipe)
-  }()
-
-  go func() {
-    _, _ = io.Copy(stderr, stderrPipe)
-  }()
-  err = cmd.Wait()
-  os.Exit(0)
+func getPids() string {
+  return strings.TrimSuffix(run("pidof","haproxy"), "\n")
 }
 
 func reload(){
@@ -66,17 +61,10 @@ func reload(){
       tempHttpBackends[key] = value
     }
     tempHttpBackendsLock.Unlock()
-
     // Generate new haproxy configuration
     executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-
-    // Restart haproxy using USR2 signal
-    log.Printf("Pid: %d", pid)
-    proc, err := os.FindProcess(pid)
-    if err != nil {
-      log.Printf(err.Error())
-    }
-    proc.Signal(syscall.SIGUSR2)
+    // reload haproxy
+    run("haproxy","-db","-f","/usr/local/etc/haproxy/haproxy.cfg","-x","/run/haproxy.sock","-sf",getPids())
   }
 }
 

@@ -17,7 +17,7 @@ import (
 )
 
 var rate = time.Second
-var throttle = time.Tick(rate)
+var throttle = time.Tick(7 * rate)
 
 // temp backend maps
 var (
@@ -62,6 +62,7 @@ func reload(){
     // Generate new haproxy configuration
     executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
     // reload haproxy
+    log.Printf("******************* reload haproxy ******************** ")
     run("haproxy","-db","-f","/usr/local/etc/haproxy/haproxy.cfg","-x","/run/haproxy.sock","-sf",getPids())
   }
 }

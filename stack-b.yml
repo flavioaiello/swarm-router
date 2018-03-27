@@ -41,5 +41,4 @@ networks:
     internal: true
     driver: overlay
   routing:
-    driver: overlay
-    attachable: true
+    external: true

@@ -8,10 +8,10 @@ services:
       - HTTP_PORTS=8080
       - TLS_PORTS=8443
       - DNS_BACKEND_FQDN=false
-      - HTTP_BACKENDS_PORT=whoami:8000 #default is 8080 can be overridden by startswith:xxxx 
+      - HTTP_BACKENDS_PORT=whoami:8000
     networks:
       default:
-      routing:
+      swarm_routing:
         aliases:
           - whoami.stack-b.vcap.me
     healthcheck:
@@ -40,5 +40,5 @@ networks:
   default:
     internal: true
     driver: overlay
-  routing:
+  swarm_routing:
     external: true

@@ -35,4 +35,3 @@ networks:
     driver: overlay
   routing:
     driver: overlay
-    attachable: true

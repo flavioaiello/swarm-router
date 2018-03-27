@@ -28,7 +28,7 @@ Common docker swarm mode requirements can be accomplished by combining different
 ### Ingress routing
 The simplest use case is to spin-up one swarm-router per docker swarm mode cluster.
 
-Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portainer for your convenience) up and running. Your services can be exposed by simply add a network alias name in case they are listening on port 8080. In any other case you can eighter switch the default port or override based on a namepatter like startswith:<port>.
+Execute `docker stack deploy -c swarm.yml swarm` to have a swarm-router (and portainer for your convenience) up and running. Your services can be exposed by simply add a network alias name in case they are listening on port 8080. In any other case you can eighter switch the default port or override based on a namepatter like startswith:<port>.
 
 ```
 ...
@@ -43,12 +43,12 @@ Execute `docker-compose up -d -f swarm.yml` to have a swarm-router (and portaine
 ### Ingress routing with stack isolation
 Providing an additional swarm-router offers isolation, thus the ability to deploy the same stack with different service names multiple times:
 ```
-docker-compose up -d -f swarm.yml
-docker-compose up -d -f stack-a.yml
-docker-compose up -d -f stack-b.yml
+docker stack deploy -c swarm.yml swarm
+docker stack deploy -c stack-a.yml astack
+docker stack deploy -c stack-b.yml bstack
 ```
 Your services can be exposed by simply adding network alias names in case they are listening on port 8080 on stack level swarm-router. In any other case you can eighter switch the default port or override based on a name pattern like startswith:<port>.
-For intrastack communication you can either use the service short names or define more short named aliases
+For intrastack communication you can either use the service short names or define more short named aliases.
 
 ## Configuration
 

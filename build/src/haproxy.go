@@ -181,7 +181,7 @@ func httpHandler(downstream net.Conn) {
     if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
       // Check if target ip is member of attached swarm networks
       if ownIPNet.Contains(backendIPAddr.IP) {
-        upstream, err := net.Dial("tcp", hostname + ":" + strconv.Itoa(getBackendPort(hostname)))
+        upstream, err := net.Dial("tcp", getBackend(hostname) + ":" + strconv.Itoa(getBackendPort(hostname)))
         if err != nil {
           log.Printf("Backend connection error: %s", err.Error())
           downstream.Close()
@@ -195,10 +195,10 @@ func httpHandler(downstream net.Conn) {
         go copy(upstream, reader)
         go copy(downstream, upstream)
         if httpBackends[hostname] == 0 {
-          go addBackend(hostname)
+          go addBackend(getBackend(hostname))
         }
       }
-      //log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), hostname, ownIPNet)
+      //log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
     }
   }
 }

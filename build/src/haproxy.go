@@ -39,6 +39,7 @@ func run(program string, args ...string) string {
   if err != nil {
       log.Printf("Error: %s", err.Error())
       log.Printf("Stderr: %s", stderr.String())
+      os.Exit(1)
   }
   return stdout.String()
 }

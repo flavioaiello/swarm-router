@@ -11,7 +11,7 @@ services:
       - HTTP_BACKENDS_PORT=whoami:8000 #default is 8080 can be overridden by startswith:xxxx 
     networks:
       default:
-      ses_routing:
+      routing:
         aliases:
           - whoami.stack-a.vcap.me
     healthcheck:

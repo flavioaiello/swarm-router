@@ -3,6 +3,7 @@ package main
 import (
   "bytes"
   "io"
+  "fmt"
   "bufio"
   "log"
   "net"
@@ -45,12 +46,11 @@ func run(program string, args ...string) string {
 }
 
 func haproxy() {
-  stdout := run("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg")
-  log.Printf("Starting haproxy: %s", stdout)
+  _ = run("haproxy","-db","-f","/usr/local/etc/haproxy/haproxy.cfg")
 }
 
 func getPids() string {
-  return strings.TrimSuffix(run("pidof","haproxy"), "\n")
+  return strings.Trim(strings.Replace(fmt.Sprint(run("pidof","haproxy")), " ", " ", -1), "[]")
 }
 
 func reload(){

@@ -49,7 +49,7 @@ func haproxy() {
 }
 
 func getPids() string {
-  return strings.TrimSpace(run("pidof","haproxy"))
+  return strings.TrimSpace(run("pidof","haproxy","-s"))
 }
 
 func reload(){

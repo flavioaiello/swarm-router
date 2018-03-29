@@ -15,7 +15,32 @@ services:
     networks:
       - default
       - routing
-    restart: always
+      swarm-router:
+    image: swarm-router:latest
+    environment:
+      - HTTP_PORTS=80
+      - TLS_PORTS=443
+      - HTTP_BACKENDS_PORT=portainer:9000 nexus:8081
+    ports:
+      - "80:80"
+      - "443:443"
+      - "1111:1111"
+    networks:
+      default:
+      routing:
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+        limits:
+          memory: 16M
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
 
   portainer:
     image: portainer/portainer
@@ -28,7 +53,20 @@ services:
       default:
         aliases:
           - portainer.vcap.me
-    restart: always
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 256M
+        limits:
+          cpus: '1.00'
+          memory: 256M
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
 
 networks:
   default:

@@ -6,19 +6,6 @@ services:
     image: flavioaiello/swarm-router:latest
     environment:
       - HTTP_PORTS=80
-      - TLS_PORTS=8443
-      - HTTP_BACKENDS_PORT=portainer:9000 #default is 8080 can be overridden by startswith:xxxx 
-    ports:
-      - "80:80"
-      - "443:443"
-      - "1111:1111"
-    networks:
-      - default
-      - routing
-      swarm-router:
-    image: swarm-router:latest
-    environment:
-      - HTTP_PORTS=80
       - TLS_PORTS=443
       - HTTP_BACKENDS_PORT=portainer:9000 nexus:8081
     ports:

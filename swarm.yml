@@ -1,4 +1,4 @@
-version: '3'
+version: '3.2'
 
 services:
 
@@ -60,3 +60,4 @@ networks:
     driver: overlay
   routing:
     driver: overlay
+    attachable: true

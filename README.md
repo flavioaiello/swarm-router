@@ -48,7 +48,7 @@ docker stack deploy -c stack-a.yml astack
 docker stack deploy -c stack-b.yml bstack
 ```
 
-![Stack isolation](https://github.com/flavioaiello/jenkins-dsl/blob/master/theme.png?raw=true)
+![Stack isolation](https://github.com/flavioaiello/swarm-router/blob/master/swarm-router.png.png?raw=true)
 
 Your services can be exposed by simply adding network alias names in case they are listening on port 8080 on stack level swarm-router. In any other case you can eighter switch the default port or override based on a name pattern like startswith:<port>.
 For intrastack communication you can either use the service short names or define more short named aliases.

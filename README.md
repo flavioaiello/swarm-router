@@ -41,7 +41,7 @@ Execute `docker stack deploy -c swarm.yml swarm` to have a swarm-router (and por
     networks:
       default:
         aliases:
-          - myservices.localtest.me
+          - myservice.mystack.localtest.me
 ```
 
 ### Ingress routing with stack isolation
@@ -52,10 +52,7 @@ docker stack deploy -c stack-a.yml astack
 docker stack deploy -c stack-b.yml bstack
 ```
 ![Stack isolation](https://github.com/flavioaiello/swarm-router/blob/master/swarm-router.png?raw=true)
-
-Your services can be exposed by simply adding network alias names in case they are listening on port 8080 on stack level swarm-router. In any other case you can eighter switch the default port or override based on a name pattern like startswith:<port>.
-For intrastack communication you can either use the service short names or define more short named aliases.
-
+  
 ## Configuration
 
 ### Listeners
@@ -68,6 +65,28 @@ TLS_PORTS=443 8443
 
 ### Backends
 
+#### Default naming
+Setting the `DNS_BACKEND_FQDN=false` on stack level enables direct service name matching, provided the hostname is equal to the incoming FQDN.
+Communication between services within the same stack, can be done with service names. This allows relative naming and therefore prevents the need to change service names when staging from test to production.
+
+#### Specific naming
+Incoming FQDN based hostnames that do not match the according serivce name, can be reached by custom aliases:
+```
+...
+  stack-router:
+...
+    networks:
+      routing:
+        aliases:
+          - myfancy.mystack.localtest.me
+...
+  myservice:
+...
+    networks:
+      default:
+        aliases:
+          - myfancy
+```
 #### Default ports
 The default port for all backends which the router will connect and forward incoming connections.
 ```
@@ -80,6 +99,9 @@ Additional port for backends which will partly match the FQDN the router will co
 HTTP_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
 TLS_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
 ```
+
+
+
 #### Todos
 - [ ] add ttl to backends
 

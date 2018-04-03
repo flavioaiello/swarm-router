@@ -39,7 +39,7 @@ services:
     networks:
       default:
         aliases:
-          - portainer.vcap.me
+          - portainer.localtest.me
     deploy:
       resources:
         reservations:

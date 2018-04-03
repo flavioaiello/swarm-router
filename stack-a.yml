@@ -13,7 +13,7 @@ services:
       default:
       swarm_routing:
         aliases:
-          - whoami.stack-a.vcap.me
+          - whoami.stack-a.localtest.me
     healthcheck:
       test: nc -w 7 -zvv 0.0.0.0 1111
       interval: 30s

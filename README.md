@@ -41,7 +41,7 @@ Execute `docker stack deploy -c swarm.yml swarm` to have a swarm-router (and por
     networks:
       default:
         aliases:
-          - myservices.vcap.me
+          - myservices.localtest.me
 ```
 
 ### Ingress routing with stack isolation

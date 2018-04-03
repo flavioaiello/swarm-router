@@ -66,11 +66,11 @@ TLS_PORTS=443 8443
 ### Backends
 
 #### Default naming
-Setting the `DNS_BACKEND_FQDN=false` on stack level enables direct service name matching, provided the hostname is equal to the incoming FQDN.
+Incoming FQDN based hostnames that do match the according serivce name, can be reached directly if the setting  `DNS_BACKEND_FQDN=false` on stack level swarm-router is set.
 Communication between services within the same stack, can be done with service names. This allows relative naming and therefore prevents the need to change service names when staging from test to production.
 
 #### Specific naming
-Incoming FQDN based hostnames that do not match the according serivce name, can be reached by custom aliases:
+Incoming FQDN based hostnames that do NOT match the according serivce name, can be reached if the setting  `DNS_BACKEND_FQDN=false` on stack level swarm-router is set and by setting custom aliases on swarm-router and service level. This way diverging service names are set on each level, using standard DNS CNAME (aliases):
 ```
 ...
   stack-router:

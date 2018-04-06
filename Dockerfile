@@ -1,5 +1,5 @@
 ### source build ###
-FROM golang:1.9 as build
+FROM golang:1.10 as build
 
 COPY build /
 

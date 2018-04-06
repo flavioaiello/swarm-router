@@ -63,7 +63,7 @@ func reload(){
     // Generate new haproxy configuration
     executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
     // reload haproxy
-    log.Printf("******************* reload haproxy ******************** ")
+    log.Printf("Reload haproxy")
     run("haproxy","-db","-f","/usr/local/etc/haproxy/haproxy.cfg","-x","/run/haproxy.sock","-sf",getPids())
   }
 }
@@ -151,42 +151,50 @@ func httpHandler(downstream net.Conn) {
       break
     }
   }
+  if isMemberOfSwarm(getBackend(hostname)) {
+    upstream, err := net.Dial("tcp", getBackend(hostname) + ":" + strconv.Itoa(getBackendPort(hostname)))
+    if err != nil {
+      log.Printf("Backend connection error: %s", err.Error())
+      downstream.Close()
+      return
+    }
+    for element := readLines.Front(); element != nil; element = element.Next() {
+      line := element.Value.(string)
+      upstream.Write([]byte(line))
+      upstream.Write([]byte("\n"))
+    }
+    go copy(upstream, reader)
+    go copy(downstream, upstream)
+    if httpBackends[hostname] == 0 {
+      go addBackend(getBackend(hostname))
+    }
+  } else {
+    downstream.Close()
+  }
+}
+
+func isMemberOfSwarm(hostname string) bool {
   // Resolve target ip address for hostname
   backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
   if err != nil {
-      log.Printf("Error resolving ip address for: %s", err.Error())
-      downstream.Close()
-      return
+      log.Printf("Error resolving ip address: %s", err.Error())
+      return false
   }
   // Get swarm-router ip adresses
   ownIPAddrs, err := net.InterfaceAddrs()
   if err != nil {
-      log.Printf("Error resolving own ip address: %s", err.Error())
-      downstream.Close()
-      return
+      log.Printf("Error resolving own ip addresses: %s", err.Error())
+      return false
   }
   for _, ownIPAddr := range ownIPAddrs {
     if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
       // Check if target ip is member of attached swarm networks
       if ownIPNet.Contains(backendIPAddr.IP) {
-        upstream, err := net.Dial("tcp", getBackend(hostname) + ":" + strconv.Itoa(getBackendPort(hostname)))
-        if err != nil {
-          log.Printf("Backend connection error: %s", err.Error())
-          downstream.Close()
-          return
-        }
-        for element := readLines.Front(); element != nil; element = element.Next() {
-          line := element.Value.(string)
-          upstream.Write([]byte(line))
-          upstream.Write([]byte("\n"))
-        }
-        go copy(upstream, reader)
-        go copy(downstream, upstream)
-        if httpBackends[hostname] == 0 {
-          go addBackend(getBackend(hostname))
-        }
+        //log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
+        return true
       }
       //log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
     }
   }
+  return false
 }

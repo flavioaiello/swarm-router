@@ -19,7 +19,7 @@ import (
 var rate = time.Second
 var throttle = time.Tick(7 * rate)
 
-// temp backend maps
+// Backend temp maps
 var (
   tempHttpBackends = make(map[string]int)
   tempHttpBackendsLock sync.RWMutex
@@ -27,6 +27,15 @@ var (
 var (
   tempTlsBackends = make(map[string]int)
   tempTlsBackendsLock sync.RWMutex
+)
+// Backend maps
+var (
+  httpBackends = make(map[string]int)
+  httpBackendsLock sync.RWMutex
+)
+var (
+  tlsBackends = make(map[string]int)
+  tlsBackendsLock sync.RWMutex
 )
 
 func run(program string, args ...string) string {
@@ -117,7 +126,14 @@ func addBackend(hostname string){
   // Add new backend to backend memory map (ttl map pending)
   log.Printf("Adding %s to swarm-router", hostname)
   httpBackendsLock.Lock()
+  // Add backend to map
   httpBackends[hostname] = getBackendPort(hostname)
+  // Cleanup backends
+  for key, value := range httpBackends {
+    if !isMemberOfSwarm(key) {
+      delete(httpBackends, key)
+    }
+  }
   httpBackendsLock.Unlock()
   go reload()
 }

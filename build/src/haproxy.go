@@ -129,7 +129,7 @@ func addBackend(hostname string){
   // Add backend to map
   httpBackends[hostname] = getBackendPort(hostname)
   // Cleanup backends
-  for key, value := range httpBackends {
+  for key, _ := range httpBackends {
     if !isMemberOfSwarm(key) {
       delete(httpBackends, key)
     }

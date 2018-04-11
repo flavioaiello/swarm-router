@@ -127,9 +127,9 @@ func addBackend(hostname string){
   // Add backend to map
   httpBackends[hostname] = getBackendPort(hostname)
   // Cleanup backends
-  for key, _ := range httpBackends {
+  for key, value := range httpBackends {
     if !isMemberOfSwarm(key) {
-      log.Printf("Removing %s from swarm-router", hostname)
+      log.Printf("Removing %s:%d from swarm-router", key, value)
       delete(httpBackends, key)
     }
   }

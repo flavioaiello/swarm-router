@@ -148,9 +148,9 @@ func httpHandler(downstream net.Conn) {
   hostname := ""
   readLines := list.New()
   for hostname == "" {
-    bytes, _, error := reader.ReadLine()
-    if error != nil {
-      log.Printf("Error reading", error)
+    bytes, _, err := reader.ReadLine()
+    if err != nil {
+      log.Printf("Error reading: %s", err.Error())
       downstream.Close()
       return
     }

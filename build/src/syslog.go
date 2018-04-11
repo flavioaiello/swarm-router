@@ -5,7 +5,6 @@ import (
   "bufio"
   "log"
   "strconv"
-  "fmt"
   "strings"
   "os"
 )
@@ -63,14 +62,12 @@ func (syslog Syslog) getSeverity(code int) string {
 
 func (syslog Syslog) listen(connection net.Conn) {
     reader := bufio.NewReader(connection)
-
     for {
         buffer := make([]byte, bufferSize)
         size, err := reader.Read(buffer)
         if err != nil {
-            log.Fatal("Read error:", err)
+            log.Fatal("Syslog read error: %s", err.Error())
         }
-
         go syslog.readData(buffer[0:size])
     }
 }
@@ -78,33 +75,27 @@ func (syslog Syslog) listen(connection net.Conn) {
 func (syslog Syslog) readData(data []byte) {
     header := "unknown:unknown"
     message := string(data)
-
     endOfCode := strings.Index(message, ">")
     if -1 != endOfCode && 5 > endOfCode {
         code, err := strconv.Atoi(string(data[1:endOfCode]))
         if nil == err {
-            header = fmt.Sprintf("%s:%s", syslog.getFacility(code), syslog.getSeverity(code))
+            header = syslog.getFacility(code) + ":" + syslog.getSeverity(code)
         }
-
         message = string(data[endOfCode + 1:])
     }
-
-    fmt.Printf("%s: %s\n", header, strings.TrimSuffix(message, "\n"))
+    log.Printf("%s: %s\n", header, strings.TrimSuffix(message, "\n"))
 }
 
 func (syslog Syslog) run() {
     if _, err := os.Stat(socketPath); nil == err {
         os.Remove(socketPath)
     }
-
-    connection, err := net.ListenUnixgram("unixgram", &net.UnixAddr{socketPath, "unixgram"})
+    conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{socketPath, "unixgram"})
     if nil != err {
-        log.Fatal("Listen error:", err)
+        log.Fatal("Listen error: %s", err.Error())
     }
-
     if err := os.Chmod(socketPath, 0777); nil != err {
-        log.Fatal("Impossible to change the socket permission.")
+        log.Fatal("Socket permission error: %s", err.Error())
     }
-
-    syslog.listen(connection)
+    syslog.listen(conn)
 }

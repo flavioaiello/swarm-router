@@ -46,9 +46,7 @@ func run(program string, args ...string) string {
   cmd.Stderr = &stderr;
   err := cmd.Run()
   if err != nil {
-      log.Printf("Error: %s", err.Error())
-      log.Printf("Stderr: %s", stderr.String())
-      os.Exit(1)
+      log.Fatal("Error: %s\nStderr: %s", err.Error(), stderr.String())
   }
   return stdout.String()
 }
@@ -131,6 +129,7 @@ func addBackend(hostname string){
   // Cleanup backends
   for key, _ := range httpBackends {
     if !isMemberOfSwarm(key) {
+      log.Printf("Removing %s from swarm-router", hostname)
       delete(httpBackends, key)
     }
   }

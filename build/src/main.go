@@ -37,7 +37,7 @@ func main() {
   executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 
   // Start syslog socket
-  syslog := Syslog{}
+  syslog := syslog{}
   go syslog.run()
 
   // Start haproxy

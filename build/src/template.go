@@ -8,7 +8,7 @@ import (
   "strings"
 )
 
-type Config struct {
+type config struct {
   Env map[string]string
   HttpBackends map[string]int
   TlsBackends map[string]int
@@ -33,7 +33,7 @@ func newTemplate(name string) *template.Template {
 }
 
 func executeTemplate(tmpl string, cfg string) {
-  config := new(Config)
+  config := new(config)
   config.Env = envMap()
   config.HttpBackends = httpBackends
   config.TlsBackends = tlsBackends

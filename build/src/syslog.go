@@ -14,9 +14,9 @@ const (
     socketPath = "/dev/log"
 )
 
-type Syslog struct {}
+type syslog struct {}
 
-func (syslog Syslog) getFacility(code int) string {
+func (syslog syslog) getFacility(code int) string {
     switch code >> 3 {
         case 0: return "kern"
         case 1: return "user"
@@ -46,7 +46,7 @@ func (syslog Syslog) getFacility(code int) string {
     }
 }
 
-func (syslog Syslog) getSeverity(code int) string {
+func (syslog syslog) getSeverity(code int) string {
     switch code & 0x07 {
         case 0: return "emerg"
         case 1: return "alert"
@@ -60,7 +60,7 @@ func (syslog Syslog) getSeverity(code int) string {
     }
 }
 
-func (syslog Syslog) listen(connection net.Conn) {
+func (syslog syslog) listen(connection net.Conn) {
     reader := bufio.NewReader(connection)
     for {
         buffer := make([]byte, bufferSize)
@@ -72,7 +72,7 @@ func (syslog Syslog) listen(connection net.Conn) {
     }
 }
 
-func (syslog Syslog) readData(data []byte) {
+func (syslog syslog) readData(data []byte) {
     header := "unknown:unknown"
     message := string(data)
     endOfCode := strings.Index(message, ">")
@@ -86,7 +86,7 @@ func (syslog Syslog) readData(data []byte) {
     log.Printf("%s: %s\n", header, strings.TrimSuffix(message, "\n"))
 }
 
-func (syslog Syslog) run() {
+func (syslog syslog) run() {
     if _, err := os.Stat(socketPath); nil == err {
         os.Remove(socketPath)
     }

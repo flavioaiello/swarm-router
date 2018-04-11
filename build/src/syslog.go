@@ -14,9 +14,7 @@ const (
     socketPath = "/dev/log"
 )
 
-type syslog struct {}
-
-func (syslog syslog) getFacility(code int) string {
+func getFacility(code int) string {
     switch code >> 3 {
         case 0: return "kern"
         case 1: return "user"
@@ -46,7 +44,7 @@ func (syslog syslog) getFacility(code int) string {
     }
 }
 
-func (syslog syslog) getSeverity(code int) string {
+func getSeverity(code int) string {
     switch code & 0x07 {
         case 0: return "emerg"
         case 1: return "alert"
@@ -60,7 +58,7 @@ func (syslog syslog) getSeverity(code int) string {
     }
 }
 
-func (syslog syslog) listen(connection net.Conn) {
+func listen(connection net.Conn) {
     reader := bufio.NewReader(connection)
     for {
         buffer := make([]byte, bufferSize)
@@ -68,25 +66,25 @@ func (syslog syslog) listen(connection net.Conn) {
         if err != nil {
             log.Fatal("Syslog read error: %s", err.Error())
         }
-        go syslog.readData(buffer[0:size])
+        go readData(buffer[0:size])
     }
 }
 
-func (syslog syslog) readData(data []byte) {
+func readData(data []byte) {
     header := "unknown:unknown"
     message := string(data)
     endOfCode := strings.Index(message, ">")
     if -1 != endOfCode && 5 > endOfCode {
         code, err := strconv.Atoi(string(data[1:endOfCode]))
         if nil == err {
-            header = syslog.getFacility(code) + ":" + syslog.getSeverity(code)
+            header = getFacility(code) + ":" + getSeverity(code)
         }
         message = string(data[endOfCode + 1:])
     }
     log.Printf("%s: %s\n", header, strings.TrimSuffix(message, "\n"))
 }
 
-func (syslog syslog) run() {
+func run() {
     if _, err := os.Stat(socketPath); nil == err {
         os.Remove(socketPath)
     }
@@ -97,5 +95,5 @@ func (syslog syslog) run() {
     if err := os.Chmod(socketPath, 0777); nil != err {
         log.Fatal("Socket permission error: %s", err.Error())
     }
-    syslog.listen(conn)
+    listen(conn)
 }

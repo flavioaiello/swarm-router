@@ -84,7 +84,7 @@ func readData(data []byte) {
     log.Printf("%s: %s\n", header, strings.TrimSuffix(message, "\n"))
 }
 
-func run() {
+func syslog() {
     if _, err := os.Stat(socketPath); nil == err {
         os.Remove(socketPath)
     }

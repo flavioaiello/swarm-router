@@ -4,7 +4,7 @@
 [![Docker Automation](
 https://img.shields.io/docker/automated/flavioaiello/swarm-router.svg)](https://hub.docker.com/r/flavioaiello/swarm-router/)
 [![Go Report](
-https://goreportcard.com/badge/github.com/flavioaiello/swarm-router)](https://hub.docker.com/r/flavioaiello/swarm-router/)
+https://goreportcard.com/badge/github.com/flavioaiello/swarm-router)](https://goreportcard.com/report/github.com/flavioaiello/swarm-router)
 
 # Swarm-Router
 The «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang offering unique advantages:
@@ -101,9 +101,6 @@ Additional port for backends which will partly match the FQDN the router will co
 HTTP_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
 TLS_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
 ```
-
-#### Todos
-- [ ] add ttl to backends
 
 #### Insights
 If no backends are known to handle the request, but the FQDN is propagated by swarm, the connection will be forwarded to the swarm-router service listeners. The swarm-router default listeners do NO need any further configuration and will propagated to the default haproxy.tmpl configuration file.

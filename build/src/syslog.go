@@ -38,24 +38,16 @@ func getSeverity(code int) string {
 }
 
 func listen(connection net.Conn) {
-	reader := bufio.NewReader(connection)
-	for {
-		buffer := make([]byte, bufferSize)
-		size, err := reader.Read(buffer)
-		if err != nil {
-			log.Fatalf("Syslog read error: %s", err.Error())
-		}
-		go readData(buffer[0:size])
-	}
+
 }
 
 func readData(data []byte) {
 	header := "n.a."
 	message := string(data)
 	endOfCode := strings.Index(message, ">")
-	if -1 != endOfCode && 5 > endOfCode {
+	if endOfCode != -1 && endOfCode < 5 {
 		code, err := strconv.Atoi(string(data[1:endOfCode]))
-		if nil == err {
+		if err == nil {
 			header = getSeverity(code)
 		}
 		message = string(data[endOfCode+1:])
@@ -67,12 +59,24 @@ func syslog() {
 	if _, err := os.Stat(socketPath); nil == err {
 		os.Remove(socketPath)
 	}
-	conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{socketPath, "unixgram"})
-	if nil != err {
+	unixAddr, err := net.ResolveUnixAddr("unixgram", socketPath)
+	if err != nil {
+		log.Fatalf("Resolv error: %s", err.Error())
+	}
+	conn, err := net.ListenUnixgram("unixgram", unixAddr)
+	if err != nil {
 		log.Fatalf("Listen error: %s", err.Error())
 	}
 	if err := os.Chmod(socketPath, 0777); nil != err {
 		log.Fatalf("Socket permission error: %s", err.Error())
 	}
-	listen(conn)
+	reader := bufio.NewReader(connection)
+	for {
+		buffer := make([]byte, bufferSize)
+		size, err := reader.Read(buffer)
+		if err != nil {
+			log.Fatalf("Syslog read error: %s", err.Error())
+		}
+		go readData(buffer[0:size])
+	}
 }

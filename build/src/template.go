@@ -40,17 +40,17 @@ func executeTemplate(tmpl string, cfg string) {
 
 	template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
 	if err != nil {
-		log.Fatalf("Unable to parse template: %s", err)
+		log.Fatalf("Unable to parse template error: %s", err.Error())
 		return
 	}
 	file, err := os.Create(cfg)
 	if err != nil {
-		log.Println("create file: ", err)
+		log.Printf("Create file error: %s", err.Error())
 		return
 	}
 	err = template.Execute(file, config)
 	if err != nil {
-		log.Print("execute: ", err)
+		log.Printf("Execute template error: %s", err.Error()
 		return
 	}
 	file.Close()

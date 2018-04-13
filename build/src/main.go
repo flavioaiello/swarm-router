@@ -49,8 +49,8 @@ func main() {
 	// Start proxy
 	httpDone := make(chan int)
 	go defaultBackend(httpDone, 10080, httpHandler)
-	//tlsDone := make(chan int)
-	//go defaultBackend(tlsDone, 10443, tlsHandler)
+	tlsDone := make(chan int)
+	go defaultBackend(tlsDone, 10443, tlsHandler)
 	<-httpDone
-	//<-tlsDone
+	<-tlsDone
 }

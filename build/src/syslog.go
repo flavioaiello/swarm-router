@@ -37,10 +37,6 @@ func getSeverity(code int) string {
 	}
 }
 
-func listen(connection net.Conn) {
-
-}
-
 func readData(data []byte) {
 	header := "n.a."
 	message := string(data)

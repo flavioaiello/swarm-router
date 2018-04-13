@@ -50,7 +50,7 @@ func executeTemplate(tmpl string, cfg string) {
 	}
 	err = template.Execute(file, config)
 	if err != nil {
-		log.Printf("Execute template error: %s", err.Error()
+		log.Printf("Execute template error: %s", err.Error())
 		return
 	}
 	file.Close()

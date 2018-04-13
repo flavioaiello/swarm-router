@@ -71,7 +71,7 @@ func reload() {
 		// Generate new haproxy configuration
 		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 		// reload haproxy
-		log.Printf("Reload haproxy")
+		log.Printf("*** Reload haproxy ***")
 		run("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg", "-x", "/run/haproxy.sock", "-sf", getPids())
 	}
 }
@@ -138,6 +138,32 @@ func addBackend(hostname string) {
 	go reload()
 }
 
+func isMemberOfSwarm(hostname string) bool {
+	// Resolve target ip address for hostname
+	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
+	if err != nil {
+		log.Printf("Error resolving ip address: %s", err.Error())
+		return false
+	}
+	// Get swarm-router ip adresses
+	ownIPAddrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Printf("Error resolving own ip addresses: %s", err.Error())
+		return false
+	}
+	for _, ownIPAddr := range ownIPAddrs {
+		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
+			// Check if target ip is member of attached swarm networks
+			if ownIPNet.Contains(backendIPAddr.IP) {
+				//log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
+				return true
+			}
+			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
+		}
+	}
+	return false
+}
+
 func copy(dst io.WriteCloser, src io.Reader) {
 	io.Copy(dst, src)
 	dst.Close()
@@ -189,28 +215,107 @@ func httpHandler(downstream net.Conn) {
 	}
 }
 
-func isMemberOfSwarm(hostname string) bool {
-	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
+func tlsHandler(downstream net.Conn) {
+	firstByte := make([]byte, 1)
+	_, err := downstream.Read(firstByte)
 	if err != nil {
-		log.Printf("Error resolving ip address: %s", err.Error())
-		return false
+		log.Printf("Could not read first byte: %s", err.Error())
+		return
 	}
-	// Get swarm-router ip adresses
-	ownIPAddrs, err := net.InterfaceAddrs()
+	if firstByte[0] != 0x16 {
+		log.Printf("Protocoll not TLS: %s", err.Error())
+	}
+	versionBytes := make([]byte, 2)
+	_, err = downstream.Read(versionBytes)
 	if err != nil {
-		log.Printf("Error resolving own ip addresses: %s", err.Error())
-		return false
+		log.Printf("Could not read TLS version: %s", err.Error())
+		return
 	}
-	for _, ownIPAddr := range ownIPAddrs {
-		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
-			// Check if target ip is member of attached swarm networks
-			if ownIPNet.Contains(backendIPAddr.IP) {
-				//log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
-				return true
+	if versionBytes[0] < 3 || (versionBytes[0] == 3 && versionBytes[1] < 1) {
+		log.Printf("SSL is deprecated, aborting")
+		return
+	}
+	restLengthBytes := make([]byte, 2)
+	_, err = downstream.Read(restLengthBytes)
+	if err != nil {
+		log.Printf("Could not read rest length: %s", err.Error())
+		return
+	}
+	restLength := (int(restLengthBytes[0]) << 8) + int(restLengthBytes[1])
+	rest := make([]byte, restLength)
+	_, err = downstream.Read(rest)
+	if err != nil {
+		log.Printf("Could not read rest data: %s", err.Error())
+		return
+	}
+	current := 0
+	handshakeType := rest[0]
+	current += 1
+	if handshakeType != 0x1 {
+		log.Printf("Not client hello")
+		return
+	}
+	// Skip over another length
+	current += 3
+	// Skip over protocolversion
+	current += 2
+	// Skip over random number
+	current += 4 + 28
+	// Skip over session ID
+	sessionIDLength := int(rest[current])
+	current += 1
+	current += sessionIDLength
+	cipherSuiteLength := (int(rest[current]) << 8) + int(rest[current+1])
+	current += 2
+	current += cipherSuiteLength
+	compressionMethodLength := int(rest[current])
+	current += 1
+	current += compressionMethodLength
+	if current > restLength {
+		log.Printf("No extensions found")
+		return
+	}
+	// Skip over extensionsLength
+	// extensionsLength := (int(rest[current]) << 8) + int(rest[current + 1])
+	current += 2
+	hostname := ""
+	for current < restLength && hostname == "" {
+		extensionType := (int(rest[current]) << 8) + int(rest[current+1])
+		current += 2
+		extensionDataLength := (int(rest[current]) << 8) + int(rest[current+1])
+		current += 2
+		if extensionType == 0 {
+			// Skip over number of names as we're assuming there's just one
+			current += 2
+			nameType := rest[current]
+			current += 1
+			if nameType != 0 {
+				log.Printf("Not a hostname")
+				return
 			}
-			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
+			nameLen := (int(rest[current]) << 8) + int(rest[current+1])
+			current += 2
+			hostname = string(rest[current : current+nameLen])
+		}
+		current += extensionDataLength
+	}
+	if isMemberOfSwarm(getBackend(hostname)) {
+		upstream, err := net.Dial("tcp", getBackend(hostname)+":"+strconv.Itoa(getBackendPort(hostname)))
+		if err != nil {
+			log.Printf("Backend connection error: %s", err.Error())
+			downstream.Close()
+			return
+		}
+		upstream.Write(firstByte)
+		upstream.Write(versionBytes)
+		upstream.Write(restLengthBytes)
+		upstream.Write(rest)
+		go copy(upstream, downstream)
+		go copy(downstream, upstream)
+		if httpBackends[hostname] == 0 {
+			go addBackend(getBackend(hostname))
+		} else {
+			downstream.Close()
 		}
 	}
-	return false
 }

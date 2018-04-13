@@ -50,7 +50,7 @@ func listen(connection net.Conn) {
 }
 
 func readData(data []byte) {
-  header := "null:null"
+	header := "n.a."
 	message := string(data)
 	endOfCode := strings.Index(message, ">")
 	if -1 != endOfCode && 5 > endOfCode {

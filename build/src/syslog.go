@@ -66,7 +66,7 @@ func syslog() {
 	if err := os.Chmod(socketPath, 0777); nil != err {
 		log.Fatalf("Socket permission error: %s", err.Error())
 	}
-	reader := bufio.NewReader(connection)
+	reader := bufio.NewReader(conn)
 	for {
 		buffer := make([]byte, bufferSize)
 		size, err := reader.Read(buffer)

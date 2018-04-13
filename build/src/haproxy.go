@@ -47,7 +47,7 @@ func run(program string, args ...string) string {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		log.Fatal("Error: %s\nStderr: %s", err.Error(), stderr.String())
+		log.Fatalf("Error: %s\nStderr: %s", err.Error(), stderr.String())
 	}
 	return stdout.String()
 }

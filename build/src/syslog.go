@@ -43,7 +43,7 @@ func listen(connection net.Conn) {
 		buffer := make([]byte, bufferSize)
 		size, err := reader.Read(buffer)
 		if err != nil {
-			log.Fatal("Syslog read error: %s", err.Error())
+			log.Fatalf("Syslog read error: %s", err.Error())
 		}
 		go readData(buffer[0:size])
 	}
@@ -69,10 +69,10 @@ func syslog() {
 	}
 	conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{socketPath, "unixgram"})
 	if nil != err {
-		log.Fatal("Listen error: %s", err.Error())
+		log.Fatalf("Listen error: %s", err.Error())
 	}
 	if err := os.Chmod(socketPath, 0777); nil != err {
-		log.Fatal("Socket permission error: %s", err.Error())
+		log.Fatalf("Socket permission error: %s", err.Error())
 	}
 	listen(conn)
 }

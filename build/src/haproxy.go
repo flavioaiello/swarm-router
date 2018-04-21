@@ -235,43 +235,43 @@ func httpHandler(downstream net.Conn) {
 
 func tlsHandler(downstream net.Conn) {
 	firstByte := make([]byte, 1)
-	_, error := downstream.Read(firstByte)
-	if error != nil {
-		fmt.Println("Couldn't read first byte :-(")
+	_, err := downstream.Read(firstByte)
+	if err != nil {
+		log.Printf("First byte error: %s", err.Error())
 		return
 	}
 	if firstByte[0] != 0x16 {
-		fmt.Println("Not TLS :-(")
+		log.Printf("Not TLS error")
 	}
 	versionBytes := make([]byte, 2)
-	_, error = downstream.Read(versionBytes)
-	if error != nil {
-		fmt.Println("Couldn't read version bytes :-(")
+	_, err = downstream.Read(versionBytes)
+	if err != nil {
+		log.Printf("Version bytes error: %s", err.Error())
 		return
 	}
 	if versionBytes[0] < 3 || (versionBytes[0] == 3 && versionBytes[1] < 1) {
-		fmt.Println("SSL < 3.1 so it's still not TLS")
+		log.Printf("SSL not TLS error")
 		return
 	}
 	restLengthBytes := make([]byte, 2)
-	_, error = downstream.Read(restLengthBytes)
-	if error != nil {
-		fmt.Println("Couldn't read restLength bytes :-(")
+	_, err = downstream.Read(restLengthBytes)
+	if err != nil {
+		log.Printf("restLength byte error: %s", err.Error())
 		return
 	}
 	restLength := (int(restLengthBytes[0]) << 8) + int(restLengthBytes[1])
 
 	rest := make([]byte, restLength)
-	_, error = downstream.Read(rest)
-	if error != nil {
-		fmt.Println("Couldn't read rest of bytes")
+	_, err = downstream.Read(rest)
+	if err != nil {
+		log.Printf("Rest bytes error: %s", err.Error())
 		return
 	}
 	current := 0
 	handshakeType := rest[0]
 	current += 1
 	if handshakeType != 0x1 {
-		fmt.Println("Not a ClientHello")
+		log.Printf("ClientHello missing error")
 		return
 	}
 	// Skip over another length
@@ -291,14 +291,14 @@ func tlsHandler(downstream net.Conn) {
 	current += 1
 	current += compressionMethodLength
 	if current > restLength {
-		fmt.Println("no extensions")
+		log.Printf("Extensions missing error")
 		return
 	}
 	// Skip over extensionsLength
 	// extensionsLength := (int(rest[current]) << 8) + int(rest[current + 1])
 	current += 2
 	sniHeader := ""
-	for current < restLength && hostname == "" {
+	for current < restLength && sniHeader == "" {
 		extensionType := (int(rest[current]) << 8) + int(rest[current+1])
 		current += 2
 		extensionDataLength := (int(rest[current]) << 8) + int(rest[current+1])
@@ -309,7 +309,7 @@ func tlsHandler(downstream net.Conn) {
 			nameType := rest[current]
 			current += 1
 			if nameType != 0 {
-				fmt.Println("Not a hostname")
+				log.Printf("SNI header missing error")
 				return
 			}
 			nameLen := (int(rest[current]) << 8) + int(rest[current+1])

@@ -8,7 +8,6 @@ services:
       - HTTP_PORTS=80
       - TLS_PORTS=443
       - HTTP_BACKENDS_PORT=portainer:9000 nexus:8081
-      - TLS_CERT=/certs/selfsigned.pem
     ports:
       - "80:80"
       - "443:443"

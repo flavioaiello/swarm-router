@@ -27,38 +27,38 @@ var backends = struct {
 }{endpoints: make(map[string]bool)}
 
 func addBackend(endpoint string, encryption bool) {
-	defer backends.Unlock()
 	defer cleanupBackends()
 	if _, exists := backends.endpoints[endpoint]; !exists {
 		backends.Lock()
+		defer backends.Unlock()
 		backends.endpoints[endpoint] = encryption
 		backends.active = false
 		log.Printf("Adding %s to swarm-router", endpoint)
-		reload()
+		go reload()
 	}
 }
 
 func delBackend(endpoint string) {
-	defer backends.Unlock()
 	defer cleanupBackends()
 	if _, exists := backends.endpoints[endpoint]; exists {
 		backends.Lock()
+		defer backends.Unlock()
 		delete(backends.endpoints, endpoint)
 		backends.active = false
 		log.Printf("Removing %s from swarm-router", endpoint)
-		reload()
+		go reload()
 	}
 }
 
 func cleanupBackends() {
-	defer backends.Unlock()
 	for endpoint, _ := range backends.endpoints {
 		if !isMember(getBackendHostname(endpoint)) {
 			backends.Lock()
+			defer backends.Unlock()
 			delete(backends.endpoints, endpoint)
 			backends.active = false
 			log.Printf("Removing %s from swarm-router due to cleanup", endpoint)
-			reload()
+			go reload()
 		}
 	}
 }
@@ -122,10 +122,10 @@ func isMember(endpoint string) bool {
 		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
 			// Check if target ip is member of attached swarm networks
 			if ownIPNet.Contains(backendIPAddr.IP) {
-				//log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
+				log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackendHostname(endpoint), ownIPNet)
 				return true
 			}
-			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackend(hostname), ownIPNet)
+			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackendHostname(endpoint), ownIPNet)
 		}
 	}
 	return false
@@ -213,11 +213,8 @@ func httpHandler(downstream net.Conn) {
 			break
 		}
 	}
-	log.Printf("Endpoint: %s", endpoint)
-	log.Printf("Hostname: %s", getBackendHostname(endpoint))
-	log.Printf("Port: %d", getBackendPort(endpoint, false))
 	if isMember(endpoint) {
-		upstream, err := net.Dial("tcp", getBackendHostname(endpoint)+":"+strconv.Itoa(getBackendPort(endpoint, false)))
+		upstream, err := net.Dial("tcp", getBackendHostname(endpoint) + ":" + strconv.Itoa(getBackendPort(endpoint, false)))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -230,6 +227,9 @@ func httpHandler(downstream net.Conn) {
 		}
 		go copy(upstream, reader)
 		go copy(downstream, upstream)
+		log.Printf("Endpoint: %s", endpoint)
+		log.Printf("Hostname: %s", getBackendHostname(endpoint))
+		log.Printf("Port: %d", getBackendPort(endpoint, false))
 		go addBackend(endpoint, false)
 	} else {
 		downstream.Close()
@@ -308,11 +308,8 @@ func tlsHandler(downstream net.Conn) {
 		}
 		current += extensionDataLength
 	}
-	log.Printf("Endpoint: %s", endpoint)
-	log.Printf("Hostname: %s", getBackendHostname(endpoint))
-	log.Printf("Port: %d", getBackendPort(endpoint, false))
 	if isMember(endpoint) {
-		upstream, err := net.Dial("tcp", getBackendHostname(endpoint)+":"+strconv.Itoa(getBackendPort(endpoint, true)))
+		upstream, err := net.Dial("tcp", getBackendHostname(endpoint) + ":" + strconv.Itoa(getBackendPort(endpoint, true)))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -324,6 +321,9 @@ func tlsHandler(downstream net.Conn) {
 		upstream.Write(rest)
 		go copy(upstream, downstream)
 		go copy(downstream, upstream)
+		log.Printf("Endpoint: %s", endpoint)
+		log.Printf("Hostname: %s", getBackendHostname(endpoint))
+		log.Printf("Port: %d", getBackendPort(endpoint, false))
 		go addBackend(endpoint, true)
 	} else {
 		downstream.Close()

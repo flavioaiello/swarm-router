@@ -43,7 +43,7 @@ listen stats
 frontend swarm-router-http{{ range $port := split $.Env.HTTP_PORTS " " }}
     bind *:{{ $port }}{{ end }}
     mode http
-    use_backend %[req.hdr(host)]
+    use_backend %[req.hdr(host),lower,field(1,':')]
     default_backend swarm-router-http
 
 frontend swarm-router-tls{{ range $port := split $.Env.TLS_PORTS " " }}
@@ -64,6 +64,6 @@ backend swarm-router-tls
 
 {{ range $endpoint, $encryption := $.Endpoints }}
 backend {{ $endpoint }}
-    mode {{ if and $encryption not $.Env.TLS_CERT }}tcp{{ else }}http{{ end }}
-    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint }} check inter 10s resolvers docker
+    {{ if and $encryption (not $.Env.TLS_CERT) }}mode tcp{{ else }}mode http{{ end }}
+    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint $encryption }} check inter 10s resolvers docker
 {{ end }}

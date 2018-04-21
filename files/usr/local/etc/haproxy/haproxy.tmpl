@@ -15,10 +15,14 @@ defaults
     option tcplog
     option clitcpka
     option dontlognull
+    option forwardfor
     retries 3
-    timeout client 7200s
-    timeout server 7200s
-    timeout connect 60s
+    timeout client 60s
+    timeout server 600s
+    timeout connect 5s
+    timeout queue 30s
+    timeout http-request 5s
+    timeout http-keep-alive 30s
     default-server init-addr last,libc,none
 
 resolvers docker

@@ -92,7 +92,7 @@ func getBackendPort(endpoint string, encryption bool) int {
 }
 
 func getBackendHostname(endpoint string) string {
-	hostname = endpoint
+	hostname := endpoint
 	if strings.ContainsAny(hostname, ":") {
 	  hostname, _, _ := net.SplitHostPort(hostname)
 	}

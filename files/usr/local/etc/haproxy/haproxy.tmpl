@@ -64,6 +64,6 @@ backend swarm-router-tls
 
 {{ range $endpoint, $encryption := $.Endpoints }}
 backend {{ $endpoint }}
-    mode {{ if and $encryption !$.Env.TLS_CERT }}tcp{{ else }}http{{ end }}
+    mode {{ if and $encryption not $.Env.TLS_CERT }}tcp{{ else }}http{{ end }}
     server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint }} check inter 10s resolvers docker
 {{ end }}

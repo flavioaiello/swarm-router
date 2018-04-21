@@ -67,7 +67,7 @@ func getBackendPort(endpoint string, encryption bool) int {
 	backendPort := 0
 	if !encryption {
 		// Set default http port
-		backendPort, _ = strconv.Atoi(httpBackendsDefaultPort)
+		backendPort = httpBackendsDefaultPort
 		// Set special port if any
 		for i := range httpBackendsPort {
 			backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
@@ -78,7 +78,7 @@ func getBackendPort(endpoint string, encryption bool) int {
 		}
 	} else {
 		// Set default tls port
-		backendPort, _ = strconv.Atoi(tlsBackendsDefaultPort)
+		backendPort = tlsBackendsDefaultPort
 		// Set special port if any
 		for i := range httpBackendsPort {
 			backend, port, _ := net.SplitHostPort(tlsBackendsPort[i])
@@ -164,7 +164,7 @@ func reload() {
 
 func swarmResolver(done chan int, port int, handle func(net.Conn)) {
 	defer doneChan(done)
-	listener, err := net.Listen("tcp", "127.0.0.1:" + port)
+	listener, err := net.Listen("tcp", "127.0.0.1:" + strconv.Itoa(port))
 	if err != nil {
 		log.Printf("Listening error: %s", err.Error())
 		return

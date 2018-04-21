@@ -49,6 +49,8 @@ frontend swarm-router-http{{ range $port := split $.Env.HTTP_PORTS " " }}
 frontend swarm-router-tls{{ range $port := split $.Env.TLS_PORTS " " }}
     bind *:{{ $port }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}{{ end }}
     mode tcp
+    tcp-request inspect-delay 5s
+    tcp-request content accept if { req.ssl_hello_type 1 }
     use_backend %[{{ if $.Env.TLS_CERT }}ssl_fc_sni{{ else }}req.ssl_sni{{ end }}]
     default_backend swarm-router-tls
 

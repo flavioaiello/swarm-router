@@ -46,7 +46,7 @@ func main() {
 	// Start haproxy
 	go haproxy()
 
-	// Start swarm-router config listeners
+	// Start http swarm-router config listener
 	httpDone := make(chan int)
 	go swarmResolver(httpDone, 10080, httpHandler)
 	tlsDone := make(chan int)

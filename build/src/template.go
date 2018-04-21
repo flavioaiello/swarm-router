@@ -9,9 +9,8 @@ import (
 )
 
 type config struct {
-	Env          map[string]string
-	HttpBackends map[string]int
-	TlsBackends  map[string]int
+	Env       map[string]string
+	Endpoints map[string]bool
 }
 
 func envMap() map[string]string {
@@ -25,9 +24,10 @@ func envMap() map[string]string {
 
 func newTemplate(name string) *template.Template {
 	tmpl := template.New(name).Funcs(template.FuncMap{
-		"split":      strings.Split,
-		"splitN":     strings.SplitN,
-		"getBackend": getBackend,
+		"split":              strings.Split,
+		"splitN":             strings.SplitN,
+		"getBackendHostname": getBackendHostname,
+		"getBackendPort":     getBackendPort,
 	})
 	return tmpl
 }
@@ -35,8 +35,7 @@ func newTemplate(name string) *template.Template {
 func executeTemplate(tmpl string, cfg string) {
 	config := new(config)
 	config.Env = envMap()
-	config.HttpBackends = httpBackends
-	config.TlsBackends = tlsBackends
+	config.Endpoints = backends.endpoints
 
 	template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
 	if err != nil {

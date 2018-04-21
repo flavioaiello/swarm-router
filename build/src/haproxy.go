@@ -9,96 +9,90 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-var rate = time.Second
-var throttle = time.Tick(7 * rate)
-
-// Backend temp maps
 var (
-	tempHttpBackends     = make(map[string]int)
-	tempHttpBackendsLock sync.RWMutex
-)
-var (
-	tempTlsBackends     = make(map[string]int)
-	tempTlsBackendsLock sync.RWMutex
+	rate     = time.Second
+	throttle = time.Tick(7 * rate)
 )
 
-// Backend maps
-var (
-	httpBackends     = make(map[string]int)
-	httpBackendsLock sync.RWMutex
-)
-var (
-	tlsBackends     = make(map[string]int)
-	tlsBackendsLock sync.RWMutex
-)
+var backends = struct {
+	sync.RWMutex
+	active    bool
+	endpoints map[string]bool
+}{endpoints: make(map[string]bool)}
 
-func run(program string, args ...string) string {
-	var stdout, stderr bytes.Buffer
-	cmd := exec.Command(program, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		log.Fatalf("Error: %s\nStderr: %s", err.Error(), stderr.String())
+func addBackend(endpoint string, encryption bool) {
+	defer backends.Unlock()
+	defer cleanupBackends()
+	if _, exists := backends.endpoints[endpoint]; !exists {
+		backends.Lock()
+		backends.endpoints[endpoint] = encryption
+		backends.active = false
+		log.Printf("Adding %s to swarm-router", endpoint)
+		reload()
 	}
-	return stdout.String()
 }
 
-func haproxy() {
-	_ = run("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg")
+func delBackend(endpoint string) {
+	defer backends.Unlock()
+	defer cleanupBackends()
+	if _, exists := backends.endpoints[endpoint]; exists {
+		backends.Lock()
+		delete(backends.endpoints, endpoint)
+		backends.active = false
+		log.Printf("Removing %s from swarm-router", endpoint)
+		reload()
+	}
 }
 
-func getPids() string {
-	return strings.TrimSpace(run("pidof", "haproxy", "-s"))
-}
-
-func reload() {
-	<-throttle
-	if !reflect.DeepEqual(tempHttpBackends, httpBackends) {
-		tempHttpBackendsLock.Lock()
-		for key, value := range httpBackends {
-			tempHttpBackends[key] = value
+func cleanupBackends() {
+	defer backends.Unlock()
+	for endpoint, _ := range backends.endpoints {
+		if !isMember(getBackendHostname(endpoint)) {
+			backends.Lock()
+			delete(backends.endpoints, endpoint)
+			backends.active = false
+			log.Printf("Removing %s from swarm-router due to cleanup", endpoint)
+			reload()
 		}
-		tempHttpBackendsLock.Unlock()
-		// Generate new haproxy configuration
-		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-		// reload haproxy
-		log.Printf("*** Reload haproxy ***")
-		run("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg", "-x", "/run/haproxy.sock", "-sf", getPids())
 	}
 }
 
-func defaultBackend(done chan int, port int, handle func(net.Conn)) {
-	defer doneChan(done)
-	listener, err := net.Listen("tcp", "127.0.0.1:"+httpSwarmRouterPort)
-	if err != nil {
-		log.Printf("Listening error: %s", err.Error())
-		return
-	}
-	log.Printf("Listening started on port: %d", port)
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			log.Printf("Accept error: %s", err.Error())
-			return
+func getBackendPort(endpoint string, encryption bool) int {
+	backendPort := 0
+  if !encryption {
+		// Set default http port
+    backendPort, _ = strconv.Atoi(httpBackendsDefaultPort)
+		// Set special port if any
+		for i := range httpBackendsPort {
+			backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
+			if strings.HasPrefix(endpoint, backend) {
+				backendPort, _ = strconv.Atoi(port)
+				break
+			}
 		}
-		go handle(connection)
+  } else {
+		// Set default tls port
+		backendPort, _ = strconv.Atoi(tlsBackendsDefaultPort)
+		// Set special port if any
+		for i := range httpBackendsPort {
+			backend, port, _ := net.SplitHostPort(tlsBackendsPort[i])
+			if strings.HasPrefix(endpoint, backend) {
+				backendPort, _ = strconv.Atoi(port)
+				break
+			}
+		}
 	}
+	return backendPort
 }
 
-func doneChan(done chan int) {
-	done <- 1
-}
-
-func getBackend(hostname string) string {
+func getBackendHostname(endpoint string) string {
+	hostname, _, _ := net.SplitHostPort(endpoint)
 	if !dnsBackendFqdn {
 		hostname = strings.Split(hostname, ".")[0]
 	}
@@ -108,39 +102,9 @@ func getBackend(hostname string) string {
 	return hostname
 }
 
-func getBackendPort(hostname string) int {
-	backendPort := 0
-	for i := range httpBackendsPort {
-		backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
-		if strings.HasPrefix(hostname, backend) {
-			backendPort, _ = strconv.Atoi(port)
-			break
-		}
-		backendPort, _ = strconv.Atoi(httpBackendsDefaultPort)
-	}
-	return backendPort
-}
-
-func addBackend(hostname string) {
-	// Add new backend to backend memory map (ttl map pending)
-	log.Printf("Adding %s to swarm-router", hostname)
-	httpBackendsLock.Lock()
-	// Add backend to map
-	httpBackends[hostname] = getBackendPort(hostname)
-	// Cleanup backends
-	for key, value := range httpBackends {
-		if !isMemberOfSwarm(key) {
-			log.Printf("Removing %s:%d from swarm-router", key, value)
-			delete(httpBackends, key)
-		}
-	}
-	httpBackendsLock.Unlock()
-	go reload()
-}
-
-func isMemberOfSwarm(hostname string) bool {
+func isMember(endpoint string) bool {
 	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
+	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(endpoint))
 	if err != nil {
 		log.Printf("Error resolving ip address: %s", err.Error())
 		return false
@@ -164,6 +128,62 @@ func isMemberOfSwarm(hostname string) bool {
 	return false
 }
 
+func runCommand(program string, args ...string) string {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(program, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalf("Error: %s\nStderr: %s", err.Error(), stderr.String())
+	}
+	return stdout.String()
+}
+
+func haproxy() {
+	_ = runCommand("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg")
+}
+
+func getPids() string {
+	return strings.TrimSpace(runCommand("pidof", "haproxy", "-s"))
+}
+
+func reload() {
+	<-throttle
+	if !backends.active {
+		// Generate new haproxy configuration
+		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
+		// Reload haproxy
+		log.Printf("*** Reload haproxy ***")
+		runCommand("haproxy", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg", "-x", "/run/haproxy.sock", "-sf", getPids())
+		// Set backends status
+		backends.active = true
+	}
+}
+
+func swarmResolver(done chan int, port int, handle func(net.Conn)) {
+	defer doneChan(done)
+	listener, err := net.Listen("tcp", "127.0.0.1:"+httpSwarmRouterPort)
+	if err != nil {
+		log.Printf("Listening error: %s", err.Error())
+		return
+	}
+	log.Printf("Listening started on port: %d", port)
+	for {
+		connection, err := listener.Accept()
+		if err != nil {
+			log.Printf("Accept error: %s", err.Error())
+			return
+		}
+		go handle(connection)
+	}
+}
+
+func doneChan(done chan int) {
+	done <- 1
+}
+
 func copy(dst io.WriteCloser, src io.Reader) {
 	io.Copy(dst, src)
 	dst.Close()
@@ -171,9 +191,9 @@ func copy(dst io.WriteCloser, src io.Reader) {
 
 func httpHandler(downstream net.Conn) {
 	reader := bufio.NewReader(downstream)
-	hostname := ""
+	endpoint := ""
 	readLines := list.New()
-	for hostname == "" {
+	for endpoint == "" {
 		bytes, _, err := reader.ReadLine()
 		if err != nil {
 			log.Printf("Error reading: %s", err.Error())
@@ -186,15 +206,12 @@ func httpHandler(downstream net.Conn) {
 			break
 		}
 		if strings.HasPrefix(line, "Host: ") {
-			hostname = strings.TrimPrefix(line, "Host: ")
-			if strings.ContainsAny(hostname, ":") {
-				hostname, _, _ = net.SplitHostPort(hostname)
-			}
+			endpoint = strings.TrimPrefix(line, "Host: ")
 			break
 		}
 	}
-	if isMemberOfSwarm(getBackend(hostname)) {
-		upstream, err := net.Dial("tcp", getBackend(hostname)+":"+strconv.Itoa(getBackendPort(hostname)))
+	if isMember(endpoint) {
+		upstream, err := net.Dial("tcp", getBackendHostname(endpoint)+":"+strconv.Itoa(getBackendPort(endpoint, false)))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -207,9 +224,7 @@ func httpHandler(downstream net.Conn) {
 		}
 		go copy(upstream, reader)
 		go copy(downstream, upstream)
-		if httpBackends[hostname] == 0 {
-			go addBackend(getBackend(hostname))
-		}
+		go addBackend(endpoint, false)
 	} else {
 		downstream.Close()
 	}
@@ -221,18 +236,17 @@ func tlsHandler(downstream net.Conn) {
 	if err != nil {
 		log.Printf("Could not read first byte: %s", err.Error())
 		return
-	}
-	if firstByte[0] != 0x16 {
-		log.Printf("Protocoll not TLS: %s", err.Error())
+	} else if firstByte[0] != 0x16 {
+		log.Printf("No TLS protocol error: %s", err.Error())
+		return
 	}
 	versionBytes := make([]byte, 2)
 	_, err = downstream.Read(versionBytes)
 	if err != nil {
 		log.Printf("Could not read TLS version: %s", err.Error())
 		return
-	}
-	if versionBytes[0] < 3 || (versionBytes[0] == 3 && versionBytes[1] < 1) {
-		log.Printf("SSL is deprecated, aborting")
+	} else if versionBytes[0] < 3 || (versionBytes[0] == 3 && versionBytes[1] < 1) {
+		log.Printf("Expecting TLS - aborting now  ...")
 		return
 	}
 	restLengthBytes := make([]byte, 2)
@@ -248,38 +262,27 @@ func tlsHandler(downstream net.Conn) {
 		log.Printf("Could not read rest data: %s", err.Error())
 		return
 	}
-	current := 0
 	handshakeType := rest[0]
-	current += 1
 	if handshakeType != 0x1 {
 		log.Printf("Not client hello")
 		return
 	}
-	// Skip over another length
-	current += 3
-	// Skip over protocolversion
-	current += 2
-	// Skip over random number
-	current += 4 + 28
+	// Start and skip fixed lenght headers
+	current := 38
 	// Skip over session ID
 	sessionIDLength := int(rest[current])
-	current += 1
-	current += sessionIDLength
+	current += 1 + sessionIDLength
 	cipherSuiteLength := (int(rest[current]) << 8) + int(rest[current+1])
-	current += 2
-	current += cipherSuiteLength
+	current += 2 + cipherSuiteLength
 	compressionMethodLength := int(rest[current])
-	current += 1
-	current += compressionMethodLength
+	current += 1 + compressionMethodLength
 	if current > restLength {
 		log.Printf("No extensions found")
 		return
 	}
-	// Skip over extensionsLength
-	// extensionsLength := (int(rest[current]) << 8) + int(rest[current + 1])
 	current += 2
-	hostname := ""
-	for current < restLength && hostname == "" {
+	endpoint := ""
+	for current < restLength && endpoint == "" {
 		extensionType := (int(rest[current]) << 8) + int(rest[current+1])
 		current += 2
 		extensionDataLength := (int(rest[current]) << 8) + int(rest[current+1])
@@ -295,12 +298,12 @@ func tlsHandler(downstream net.Conn) {
 			}
 			nameLen := (int(rest[current]) << 8) + int(rest[current+1])
 			current += 2
-			hostname = string(rest[current : current+nameLen])
+			endpoint = string(rest[current : current+nameLen])
 		}
 		current += extensionDataLength
 	}
-	if isMemberOfSwarm(getBackend(hostname)) {
-		upstream, err := net.Dial("tcp", getBackend(hostname)+":"+strconv.Itoa(getBackendPort(hostname)))
+	if isMember(endpoint) {
+		upstream, err := net.Dial("tcp", getBackendHostname(endpoint)+":"+strconv.Itoa(getBackendPort(endpoint, true)))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -312,10 +315,8 @@ func tlsHandler(downstream net.Conn) {
 		upstream.Write(rest)
 		go copy(upstream, downstream)
 		go copy(downstream, upstream)
-		if httpBackends[hostname] == 0 {
-			go addBackend(getBackend(hostname))
-		} else {
-			downstream.Close()
-		}
+		go addBackend(endpoint, true)
+	} else {
+		downstream.Close()
 	}
 }

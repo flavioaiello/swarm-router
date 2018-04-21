@@ -1,13 +1,14 @@
+
 global
     user haproxy
     group haproxy
-    maxconn 4096
+    maxconn 10000
     log /dev/log local0 warning
     stats socket /run/haproxy.sock mode 777 level admin expose-fd listeners
     stats timeout 30s
     tune.ssl.default-dh-param 2048
-    ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS
     ssl-default-bind-options no-sslv3 no-tlsv10
+    ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS
 
 defaults
     log global
@@ -15,10 +16,14 @@ defaults
     option tcplog
     option clitcpka
     option dontlognull
+    option forwardfor
     retries 3
-    timeout client 7200s
-    timeout server 7200s
-    timeout connect 60s
+    timeout client 60s
+    timeout server 600s
+    timeout connect 5s
+    timeout queue 30s
+    timeout http-request 5s
+    timeout http-keep-alive 30s
     default-server init-addr last,libc,none
 
 resolvers docker
@@ -38,13 +43,13 @@ listen stats
 frontend swarm-router-http{{ range $port := split $.Env.HTTP_PORTS " " }}
     bind *:{{ $port }}{{ end }}
     mode http
-    use_backend %[req.hdr(host),lower,field(1,':')]
+    use_backend %[req.hdr(host)]
     default_backend swarm-router-http
 
 frontend swarm-router-tls{{ range $port := split $.Env.TLS_PORTS " " }}
     bind *:{{ $port }}{{ if $.Env.TLS_CERT }} ssl crt {{ $.Env.TLS_CERT }}{{ end }}{{ end }}
     mode tcp
-    use_backend %[{{ if $.Env.TLS_CERT }}ssl_fc_sni(){{ else }}req.ssl_sni(){{ end }}]
+    use_backend %[{{ if $.Env.TLS_CERT }}ssl_fc_sni{{ else }}req.ssl_sni{{ end }}]
     default_backend swarm-router-tls
 
 backend swarm-router-http
@@ -55,14 +60,8 @@ backend swarm-router-tls
     mode tcp
     server swarm-router-tls 127.0.0.1:{{ $.Env.TLS_SWARM_ROUTER_PORT }} check
 
-{{ range $backend, $port := $.HttpBackends }}
-backend {{ $backend }}
-    mode http
-    server {{ $backend }} {{ getBackend $backend }}:{{ $port }} check inter 10s resolvers docker
-{{ end }}
-
-{{ range $backend, $port := $.TlsBackends }}
-backend {{ $backend }}
-    mode tcp
-    server {{ $backend }} {{ getBackend $backend }}:{{ $port }} check inter 10s resolvers docker
+{{ range $endpoint, $encryption := $.Endpoints }}
+backend {{ $endpoint }}
+    mode {{ if $encryption }}tcp{{ else }}http{{ end }}
+    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint }} check inter 10s resolvers docker
 {{ end }}

@@ -94,7 +94,7 @@ func getBackendPort(endpoint string, encryption bool) int {
 func getBackendHostname(endpoint string) string {
 	hostname := endpoint
 	if strings.ContainsAny(hostname, ":") {
-	  hostname, _, _ := net.SplitHostPort(hostname)
+	  hostname, _, _ = net.SplitHostPort(hostname)
 	}
 	if !dnsBackendFqdn {
 		hostname = strings.Split(hostname, ".")[0]

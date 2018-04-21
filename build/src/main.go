@@ -48,9 +48,9 @@ func main() {
 
 	// Start http swarm-router config listener
 	httpDone := make(chan int)
-	go swarmResolver(httpDone, httpSwarmRouterPort, httpHandler)
+	go swarmRouter(httpDone, httpSwarmRouterPort, httpHandler)
 	tlsDone := make(chan int)
-	go swarmResolver(tlsDone, tlsSwarmRouterPort, tlsHandler)
+	go swarmRouter(tlsDone, tlsSwarmRouterPort, tlsHandler)
 	<-httpDone
 	<-tlsDone
 }

@@ -92,7 +92,10 @@ func getBackendPort(endpoint string, encryption bool) int {
 }
 
 func getBackendHostname(endpoint string) string {
-	hostname, _, _ := net.SplitHostPort(endpoint)
+	hostname = endpoint
+	if strings.ContainsAny(hostname, ":") {
+	  hostname, _, _ := net.SplitHostPort(hostname)
+	}
 	if !dnsBackendFqdn {
 		hostname = strings.Split(hostname, ".")[0]
 	}
@@ -162,7 +165,7 @@ func reload() {
 	}
 }
 
-func swarmResolver(done chan int, port int, handle func(net.Conn)) {
+func swarmRouter(done chan int, port int, handle func(net.Conn)) {
 	defer doneChan(done)
 	listener, err := net.Listen("tcp", "127.0.0.1:" + strconv.Itoa(port))
 	if err != nil {
@@ -210,6 +213,9 @@ func httpHandler(downstream net.Conn) {
 			break
 		}
 	}
+	log.Printf("Endpoint: %s", endpoint)
+	log.Printf("Hostname: %s", getBackendHostname(endpoint))
+	log.Printf("Port: %d", getBackendPort(endpoint, false))
 	if isMember(endpoint) {
 		upstream, err := net.Dial("tcp", getBackendHostname(endpoint)+":"+strconv.Itoa(getBackendPort(endpoint, false)))
 		if err != nil {
@@ -302,6 +308,9 @@ func tlsHandler(downstream net.Conn) {
 		}
 		current += extensionDataLength
 	}
+	log.Printf("Endpoint: %s", endpoint)
+	log.Printf("Hostname: %s", getBackendHostname(endpoint))
+	log.Printf("Port: %d", getBackendPort(endpoint, false))
 	if isMember(endpoint) {
 		upstream, err := net.Dial("tcp", getBackendHostname(endpoint)+":"+strconv.Itoa(getBackendPort(endpoint, true)))
 		if err != nil {

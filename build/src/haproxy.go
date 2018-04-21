@@ -26,44 +26,44 @@ var backends = struct {
 	endpoints map[string]bool
 }{endpoints: make(map[string]bool)}
 
-func addBackend(endpoint string, encryption bool) {
+func addBackend(requestHeader string, encryption bool) {
 	defer cleanupBackends()
-	if _, exists := backends.endpoints[endpoint]; !exists {
+	if _, exists := backends.endpoints[requestHeader]; !exists {
 		backends.Lock()
 		defer backends.Unlock()
-		backends.endpoints[endpoint] = encryption
+		backends.endpoints[requestHeader] = encryption
 		backends.active = false
-		log.Printf("Adding %s to swarm-router", endpoint)
+		log.Printf("Adding %s to swarm-router", requestHeader)
 		go reload()
 	}
 }
 
-func delBackend(endpoint string) {
+func delBackend(requestHeader string) {
 	defer cleanupBackends()
-	if _, exists := backends.endpoints[endpoint]; exists {
+	if _, exists := backends.endpoints[requestHeader]; exists {
 		backends.Lock()
 		defer backends.Unlock()
-		delete(backends.endpoints, endpoint)
+		delete(backends.endpoints, requestHeader)
 		backends.active = false
-		log.Printf("Removing %s from swarm-router", endpoint)
+		log.Printf("Removing %s from swarm-router", requestHeader)
 		go reload()
 	}
 }
 
 func cleanupBackends() {
-	for endpoint, _ := range backends.endpoints {
-		if !isMember(getBackendHostname(endpoint)) {
+	for requestHeader, _ := range backends.endpoints {
+		if !isMember(getBackendHostname(requestHeader)) {
 			backends.Lock()
 			defer backends.Unlock()
-			delete(backends.endpoints, endpoint)
+			delete(backends.endpoints, requestHeader)
 			backends.active = false
-			log.Printf("Removing %s from swarm-router due to cleanup", endpoint)
+			log.Printf("Removing %s from swarm-router due to cleanup", requestHeader)
 			go reload()
 		}
 	}
 }
 
-func getBackendPort(endpoint string, encryption bool) int {
+func getBackendPort(requestHeader string, encryption bool) int {
 	backendPort := 0
 	if !encryption {
 		// Set default http port
@@ -71,7 +71,7 @@ func getBackendPort(endpoint string, encryption bool) int {
 		// Set special port if any
 		for i := range httpBackendsPort {
 			backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
-			if strings.HasPrefix(endpoint, backend) {
+			if strings.HasPrefix(requestHeader, backend) {
 				backendPort, _ = strconv.Atoi(port)
 				break
 			}
@@ -82,7 +82,7 @@ func getBackendPort(endpoint string, encryption bool) int {
 		// Set special port if any
 		for i := range httpBackendsPort {
 			backend, port, _ := net.SplitHostPort(tlsBackendsPort[i])
-			if strings.HasPrefix(endpoint, backend) {
+			if strings.HasPrefix(requestHeader, backend) {
 				backendPort, _ = strconv.Atoi(port)
 				break
 			}
@@ -91,8 +91,8 @@ func getBackendPort(endpoint string, encryption bool) int {
 	return backendPort
 }
 
-func getBackendHostname(endpoint string) string {
-	hostname := endpoint
+func getBackendHostname(requestHeader string) string {
+	hostname := requestHeader
 	if strings.ContainsAny(hostname, ":") {
 	  hostname, _, _ = net.SplitHostPort(hostname)
 	}
@@ -105,9 +105,9 @@ func getBackendHostname(endpoint string) string {
 	return hostname
 }
 
-func isMember(endpoint string) bool {
+func isMember(requestHeader string) bool {
 	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(endpoint))
+	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(requestHeader))
 	if err != nil {
 		log.Printf("Error resolving ip address: %s", err.Error())
 		return false
@@ -122,10 +122,10 @@ func isMember(endpoint string) bool {
 		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
 			// Check if target ip is member of attached swarm networks
 			if ownIPNet.Contains(backendIPAddr.IP) {
-				log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackendHostname(endpoint), ownIPNet)
+				log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackendHostname(requestHeader), ownIPNet)
 				return true
 			}
-			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackendHostname(endpoint), ownIPNet)
+			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackendHostname(requestHeader), ownIPNet)
 		}
 	}
 	return false
@@ -194,9 +194,9 @@ func copy(dst io.WriteCloser, src io.Reader) {
 
 func httpHandler(downstream net.Conn) {
 	reader := bufio.NewReader(downstream)
-	endpoint := ""
+	hostnameHeader := ""
 	readLines := list.New()
-	for endpoint == "" {
+	for hostnameHeader == "" {
 		bytes, _, err := reader.ReadLine()
 		if err != nil {
 			log.Printf("Error reading: %s", err.Error())
@@ -209,12 +209,12 @@ func httpHandler(downstream net.Conn) {
 			break
 		}
 		if strings.HasPrefix(line, "Host: ") {
-			endpoint = strings.TrimPrefix(line, "Host: ")
+			hostnameHeader = strings.TrimPrefix(line, "Host: ")
 			break
 		}
 	}
-	if isMember(endpoint) {
-		upstream, err := net.Dial("tcp", getBackendHostname(endpoint) + ":" + strconv.Itoa(getBackendPort(endpoint, false)))
+	if isMember(hostnameHeader) {
+		upstream, err := net.Dial("tcp", getBackendHostname(hostnameHeader) + ":" + strconv.Itoa(getBackendPort(hostnameHeader, false)))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -227,10 +227,7 @@ func httpHandler(downstream net.Conn) {
 		}
 		go copy(upstream, reader)
 		go copy(downstream, upstream)
-		log.Printf("Endpoint: %s", endpoint)
-		log.Printf("Hostname: %s", getBackendHostname(endpoint))
-		log.Printf("Port: %d", getBackendPort(endpoint, false))
-		go addBackend(endpoint, false)
+		go addBackend(hostnameHeader, false)
 	} else {
 		downstream.Close()
 	}
@@ -287,8 +284,8 @@ func tlsHandler(downstream net.Conn) {
 		return
 	}
 	current += 2
-	endpoint := ""
-	for current < restLength && endpoint == "" {
+	sniHeader := ""
+	for current < restLength && sniHeader == "" {
 		extensionType := (int(rest[current]) << 8) + int(rest[current+1])
 		current += 2
 		extensionDataLength := (int(rest[current]) << 8) + int(rest[current+1])
@@ -304,12 +301,12 @@ func tlsHandler(downstream net.Conn) {
 			}
 			nameLen := (int(rest[current]) << 8) + int(rest[current+1])
 			current += 2
-			endpoint = string(rest[current : current+nameLen])
+			sniHeader = string(rest[current : current+nameLen])
 		}
 		current += extensionDataLength
 	}
-	if isMember(endpoint) {
-		upstream, err := net.Dial("tcp", getBackendHostname(endpoint) + ":" + strconv.Itoa(getBackendPort(endpoint, true)))
+	if isMember(sniHeader) {
+		upstream, err := net.Dial("tcp", getBackendHostname(sniHeader) + ":" + strconv.Itoa(getBackendPort(sniHeader, true)))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -321,10 +318,7 @@ func tlsHandler(downstream net.Conn) {
 		upstream.Write(rest)
 		go copy(upstream, downstream)
 		go copy(downstream, upstream)
-		log.Printf("Endpoint: %s", endpoint)
-		log.Printf("Hostname: %s", getBackendHostname(endpoint))
-		log.Printf("Port: %d", getBackendPort(endpoint, false))
-		go addBackend(endpoint, true)
+		go addBackend(sniHeader, true)
 	} else {
 		downstream.Close()
 	}

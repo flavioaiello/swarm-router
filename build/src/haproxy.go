@@ -164,7 +164,7 @@ func reload() {
 
 func swarmResolver(done chan int, port int, handle func(net.Conn)) {
 	defer doneChan(done)
-	listener, err := net.Listen("tcp", "127.0.0.1:"+httpSwarmRouterPort)
+	listener, err := net.Listen("tcp", "127.0.0.1:" + port)
 	if err != nil {
 		log.Printf("Listening error: %s", err.Error())
 		return

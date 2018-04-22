@@ -2,7 +2,7 @@ version: '3.2'
 
 services:
 
-  stack-router:
+  swarm-router:
     image: flavioaiello/swarm-router:latest
     environment:
       - HTTP_PORTS=8080
@@ -13,6 +13,7 @@ services:
       default:
       swarm_routing:
         aliases:
+          - swarm-router.stack-a.localtest.me
           - whoami.stack-a.localtest.me
     healthcheck:
       test: nc -w 7 -zvv 0.0.0.0 1111

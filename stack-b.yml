@@ -13,7 +13,7 @@ services:
       default:
       swarm_routing:
         aliases:
-          - swarm-router.stack-a.localtest.me
+          - swarm-router.stack-b.localtest.me
           - whoami.stack-b.localtest.me
     healthcheck:
       test: nc -w 7 -zvv 0.0.0.0 1111

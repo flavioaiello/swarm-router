@@ -65,26 +65,30 @@ func cleanupBackends() {
 
 func getBackendPort(requestHeader string, encryption bool) int {
 	backendPort := 0
-	if !encryption {
-		// Set default http port
-		backendPort = httpBackendsDefaultPort
-		// Set special port if any
-		for i := range httpBackendsPort {
-			backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
-			if strings.HasPrefix(requestHeader, backend) {
-				backendPort, _ = strconv.Atoi(port)
-				break
-			}
-		}
-	} else {
+	if encryption {
 		// Set default tls port
 		backendPort = tlsBackendsDefaultPort
 		// Set special port if any
-		for i := range tlsBackendsPort {
-			backend, port, _ := net.SplitHostPort(tlsBackendsPort[i])
-			if strings.HasPrefix(requestHeader, backend) {
-				backendPort, _ = strconv.Atoi(port)
-				break
+		if len(tlsBackendsPort) > 1 {
+			for i := range tlsBackendsPort {
+				backend, port, _ := net.SplitHostPort(tlsBackendsPort[i])
+				if strings.HasPrefix(requestHeader, backend) {
+					backendPort, _ = strconv.Atoi(port)
+					break
+				}
+			}
+		}
+	} else {
+		// Set default http port
+		backendPort = httpBackendsDefaultPort
+		// Set special port if any
+		if len(httpBackendsPort) > 1 {
+			for i := range httpBackendsPort {
+				backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
+				if strings.HasPrefix(requestHeader, backend) {
+					backendPort, _ = strconv.Atoi(port)
+					break
+				}
 			}
 		}
 	}

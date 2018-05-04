@@ -32,7 +32,7 @@ func getEnv(key, defaultValue string) string {
 		value = defaultValue
 		os.Setenv(key, defaultValue)
 	}
-	return value
+	return strings.TrimSpace(value)
 }
 
 func main() {

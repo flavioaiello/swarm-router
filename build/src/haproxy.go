@@ -69,8 +69,8 @@ func getBackendPort(requestHeader string, encryption bool) int {
 		// Set default tls port
 		backendPort = tlsBackendsDefaultPort
 		// Set special port if any
-		if len(tlsBackendsPort) > 1 {
-			for i := range tlsBackendsPort {
+		for i := range tlsBackendsPort {
+			if tlsBackendsPort[i] != "" {
 				backend, port, _ := net.SplitHostPort(tlsBackendsPort[i])
 				if strings.HasPrefix(requestHeader, backend) {
 					backendPort, _ = strconv.Atoi(port)
@@ -82,8 +82,8 @@ func getBackendPort(requestHeader string, encryption bool) int {
 		// Set default http port
 		backendPort = httpBackendsDefaultPort
 		// Set special port if any
-		if len(httpBackendsPort) > 1 {
-			for i := range httpBackendsPort {
+		for i := range httpBackendsPort {
+			if httpBackendsPort[i] != "" {
 				backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
 				if strings.HasPrefix(requestHeader, backend) {
 					backendPort, _ = strconv.Atoi(port)

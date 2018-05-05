@@ -54,23 +54,6 @@ services:
         condition: any
         delay: 5s
         max_attempts: 10
-        
-  portainer-customizer:
-    image: flavioaiello/portainer-customizer:latest
-    deploy:
-      resources:
-        reservations:
-          cpus: '0.05'
-          memory: 256M
-        limits:
-          cpus: '1.00'
-          memory: 256M
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 10
 
 networks:
   default:

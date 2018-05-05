@@ -51,7 +51,7 @@ func delBackend(requestHeader string) {
 }
 
 func cleanupBackends() {
-	for requestHeader, _ := range backends.endpoints {
+	for requestHeader := range backends.endpoints {
 		if !isMember(getBackendHostname(requestHeader)) {
 			backends.Lock()
 			defer backends.Unlock()

@@ -4,7 +4,7 @@ global
     group haproxy
     maxconn 10000
     log /dev/log local0 warning
-    stats socket /run/haproxy.sock mode 777 level admin expose-fd listeners
+    stats socket /run/haproxy.sock mode 600 level user expose-fd listeners
     stats timeout 30s
     tune.ssl.default-dh-param 2048
     ssl-default-bind-options no-sslv3 no-tlsv10

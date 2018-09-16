@@ -33,7 +33,7 @@ Common docker swarm mode requirements can be accomplished by combining different
 ### Ingress routing
 The simplest use case is to spin-up one swarm-router per docker swarm mode cluster.
 
-Execute `docker stack deploy -c swarm.yml swarm` to have a swarm-router (and portainer for your convenience) up and running. Your services can be exposed by simply add a network alias name in case they are listening on port 8080. In any other case you can eighter switch the default port or override based on a namepatter like startswith:<port>.
+Execute `docker stack deploy -c swarm.yml swarm` to have a swarm-router (and portainer for your convenience) up and running. Your services can be exposed by simply add a network alias name in case they are listening on port 8080. In any other case you can either switch the default port or override based on a namepattern like startswith:<port>.
 
 ```
 ...

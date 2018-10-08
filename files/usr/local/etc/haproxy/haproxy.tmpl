@@ -28,10 +28,7 @@ defaults
 
 resolvers docker
     nameserver dns 127.0.0.11:53
-    resolve_retries 20
-    timeout retry 1s
-    hold timeout 5s
-    hold valid 5s
+    resolve_retries 7
 
 listen stats
     bind *:1111
@@ -64,5 +61,5 @@ backend swarm-router-tls
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
     {{ if and $encryption (not $.Env.TLS_CERT) }}mode tcp{{ else }}mode http{{ end }}
-    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint $encryption }} check inter 10s resolvers docker
+    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint $encryption }} check inter 15s resolvers docker
 {{ end }}

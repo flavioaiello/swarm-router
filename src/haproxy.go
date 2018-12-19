@@ -13,18 +13,65 @@ import (
         "syscall"
 )
 
+
 var (
 	rate     = time.Second
 	throttle = time.Tick(7 * rate)
 )
 
+
 var reloads = 0
+
 
 var backends = struct {
 	sync.RWMutex
 	active    bool
 	endpoints map[string]bool
 }{endpoints: make(map[string]bool)}
+
+
+func doneChan(done chan int) {
+	done <- 1
+}
+
+
+func reload() {
+	<-throttle
+	if !backends.active || reloads == 0 {
+
+	        log.Printf("recreate haproxy configuration")
+		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
+
+        	log.Printf("reload haproxy: send SIGUSR2 to PID 1")
+	        syscall.Kill(1, syscall.SIGUSR2)
+
+        	log.Printf("set backend status")
+		backends.active = true
+
+        	log.Printf("increment reloads counter at %d", reloads)
+		reloads++
+	}
+}
+
+
+func swarmRouter(done chan int, port int, handle func(net.Conn)) {
+	defer doneChan(done)
+	listener, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
+	if err != nil {
+		log.Printf("Listening error: %s", err.Error())
+		return
+	}
+	log.Printf("Listening started on port: %d", port)
+	for {
+		connection, err := listener.Accept()
+		if err != nil {
+			log.Printf("Accept error: %s", err.Error())
+			return
+		}
+		go handle(connection)
+	}
+}
+
 
 func addBackend(requestHeader string, encryption bool) {
 	defer cleanupBackends()
@@ -34,7 +81,7 @@ func addBackend(requestHeader string, encryption bool) {
 		backends.endpoints[requestHeader] = encryption
 		backends.active = false
 		log.Printf("Adding %s to swarm-router", requestHeader)
-		go reload()
+		reload()
 	}
 }
 
@@ -46,7 +93,7 @@ func delBackend(requestHeader string) {
 		delete(backends.endpoints, requestHeader)
 		backends.active = false
 		log.Printf("Removing %s from swarm-router", requestHeader)
-		go reload()
+		reload()
 	}
 }
 
@@ -58,7 +105,7 @@ func cleanupBackends() {
 			delete(backends.endpoints, requestHeader)
 			backends.active = false
 			log.Printf("Removing %s from swarm-router due to cleanup", requestHeader)
-			go reload()
+			reload()
 		}
 	}
 }
@@ -134,47 +181,6 @@ func isMember(requestHeader string) bool {
 	}
 	return false
 }
-
-func reload() {
-	<-throttle
-	if !backends.active || reloads == 0 {
-
-	        log.Printf("*** Regenerate haproxy configuration ***")
-		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-
-        	log.Printf("*** Reload %d haproxy ***", reloads)
-	        syscall.Kill(1, syscall.SIGUSR2)
-
-        	log.Printf("*** Set backend status and reload iterator ***")
-		backends.active = true
-		reloads++
-	}
-}
-
-
-func swarmRouter(done chan int, port int, handle func(net.Conn)) {
-	defer doneChan(done)
-	listener, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
-	if err != nil {
-		log.Printf("Listening error: %s", err.Error())
-		return
-	}
-	log.Printf("Listening started on port: %d", port)
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			log.Printf("Accept error: %s", err.Error())
-			return
-		}
-		go handle(connection)
-	}
-}
-
-
-func doneChan(done chan int) {
-	done <- 1
-}
-
 
 func copy(dst io.WriteCloser, src io.Reader) {
 	io.Copy(dst, src)

@@ -37,8 +37,13 @@ func getEnv(key, defaultValue string) string {
 
 func main() {
 
-	reload()
+	// Start syslog
+	go syslog()
 
+	// Reload haproxy
+	reload()
+	
+	// Start swarm-router
 	httpDone := make(chan int)
 	swarmRouter(httpDone, httpSwarmRouterPort, httpHandler)
 	<-httpDone

@@ -36,17 +36,10 @@ func getEnv(key, defaultValue string) string {
 }
 
 func main() {
-	// Start syslog
-	go syslog()
-	// Init haproxy config
-	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-	// Start haproxy
-	go haproxy()
-	// Start swarm-router config generator
+
+	reload()
+
 	httpDone := make(chan int)
-	go swarmRouter(httpDone, httpSwarmRouterPort, httpHandler)
-	tlsDone := make(chan int)
-	go swarmRouter(tlsDone, tlsSwarmRouterPort, tlsHandler)
+	swarmRouter(httpDone, httpSwarmRouterPort, httpHandler)
 	<-httpDone
-	<-tlsDone
 }

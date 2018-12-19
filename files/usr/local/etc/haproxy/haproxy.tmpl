@@ -1,10 +1,5 @@
-
 global
-    user haproxy
-    group haproxy
     maxconn 10000
-    log /dev/log local0 warning
-    stats socket /run/haproxy.sock mode 600 level user expose-fd listeners
     stats timeout 30s
     tune.ssl.default-dh-param 2048
     ssl-default-bind-options no-sslv3 no-tlsv10
@@ -12,12 +7,11 @@ global
 
 defaults
     log global
-    mode tcp
+    mode http
     option tcplog
     option clitcpka
     option dontlognull
     option forwardfor
-    retries 3
     timeout client 60s
     timeout server 600s
     timeout connect 5s
@@ -32,14 +26,12 @@ resolvers docker
 
 listen stats
     bind *:1111
-    mode http
     stats enable
     stats show-desc swarm-router status
     stats uri /
 
 frontend swarm-router-http{{ range $port := split $.Env.HTTP_PORTS " " }}
     bind *:{{ $port }}{{ end }}
-    mode http
     use_backend %[req.hdr(host),lower]
     default_backend swarm-router-http
 
@@ -52,7 +44,6 @@ frontend swarm-router-tls{{ range $port := split $.Env.TLS_PORTS " " }}
     default_backend swarm-router-tls
 
 backend swarm-router-http
-    mode http
     server swarm-router-http 127.0.0.1:{{ $.Env.HTTP_SWARM_ROUTER_PORT }} check
 
 backend swarm-router-tls

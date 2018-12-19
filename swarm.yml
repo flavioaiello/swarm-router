@@ -3,7 +3,7 @@ version: '3.2'
 services:
 
   swarm-router:
-    image: flavioaiello/swarm-router:latest
+    image: swarm-router:latest
     environment:
       - HTTP_PORTS=80
       - TLS_PORTS=443
@@ -36,6 +36,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --no-auth -H unix:///var/run/docker.sock
+    ports:
+      - "9000:9000"
     networks:
       default:
         aliases:

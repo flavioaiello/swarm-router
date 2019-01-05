@@ -1,30 +1,35 @@
 package main
 
 import (
-	"os"
-	"strconv"
+        "os"
+        "os/exec"
+	"log"
 	"strings"
 )
 
-// listener ports
-var httpPorts = getEnv("HTTP_PORTS", "80")
-var tlsPorts = getEnv("TLS_PORTS", "443")
+var (
+	// haproxy master pid
+	pid = 0
 
-// swarm router ports
-var httpSwarmRouterPort, _ = strconv.Atoi(getEnv("HTTP_SWARM_ROUTER_PORT", "10080"))
-var tlsSwarmRouterPort, _ = strconv.Atoi(getEnv("TLS_SWARM_ROUTER_PORT", "10443"))
+	// listener ports
+	httpPorts = getEnv("HTTP_PORTS", "80")
+	tlsPorts = getEnv("TLS_PORTS", "443")
 
-// backends default ports
-var httpBackendsDefaultPort, _ = strconv.Atoi(getEnv("HTTP_BACKENDS_DEFAULT_PORT", "8080"))
-var tlsBackendsDefaultPort, _ = strconv.Atoi(getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443"))
+	// swarm router ports
+	httpSwarmRouterPort = getEnv("HTTP_SWARM_ROUTER_PORT", "10080")
+	tlsSwarmRouterPort = getEnv("TLS_SWARM_ROUTER_PORT", "10443")
 
-// backends port rules
-var httpBackendsPort = strings.Split(getEnv("HTTP_BACKENDS_PORT", ""), " ")
-var tlsBackendsPort = strings.Split(getEnv("TLS_BACKENDS_PORT", ""), " ")
+	// backends default ports
+	httpBackendsDefaultPort = getEnv("HTTP_BACKENDS_DEFAULT_PORT", "8080")
+	tlsBackendsDefaultPort = getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443")
 
-// backend dns modes
-var dnsBackendSuffix = getEnv("DNS_BACKEND_SUFFIX", "")
-var dnsBackendFqdn, _ = strconv.ParseBool(getEnv("DNS_BACKEND_FQDN", "true"))
+	// backends port rules
+	httpBackendsPort = getEnv("HTTP_BACKENDS_PORT", "")
+	tlsBackendsPort = getEnv("TLS_BACKENDS_PORT", "")
+
+	// backend dns suffix
+	dnsBackendSuffix = getEnv("DNS_BACKEND_SUFFIX", "")
+)
 
 func getEnv(key, defaultValue string) string {
 	value, exists := os.LookupEnv(key)
@@ -37,14 +42,27 @@ func getEnv(key, defaultValue string) string {
 
 func main() {
 
-	// Start syslog
-	go syslog()
+	go start()
 
-	// Reload haproxy
-	reload()
-	
-	// Start swarm-router
-	httpDone := make(chan int)
-	swarmRouter(httpDone, httpSwarmRouterPort, httpHandler)
-	<-httpDone
+	// Execute base image cmd
+	cmd := exec.Command(os.Args[1], os.Args[2:]...)
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("Start error: %s", err.Error())
+	}
+	pid = cmd.Process.Pid
+	err := cmd.Wait()
+	log.Printf("Exit error: %s", err.Error())
+}
+
+func start() {
+
+	// haproxy config
+	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
+
+        // Start swarm-router
+        httpDone := make(chan int)
+        swarmRouter(httpDone, httpSwarmRouterPort, httpHandler)
+        <-httpDone
 }

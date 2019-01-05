@@ -7,7 +7,7 @@ services:
     environment:
       - HTTP_PORTS=80
       - TLS_PORTS=443
-      - HTTP_BACKENDS_PORT=portainer:9000 nexus:8081 swarm-router:1111
+      - HTTP_BACKENDS_PORT=portainer:9000 nexus:8081 swarm-router:1111 whoami:8000
     ports:
       - "80:80"
       - "443:443"
@@ -26,8 +26,6 @@ services:
       replicas: 1
       restart_policy:
         condition: any
-        delay: 5s
-        max_attempts: 10
 
   portainer:
     image: portainer/portainer

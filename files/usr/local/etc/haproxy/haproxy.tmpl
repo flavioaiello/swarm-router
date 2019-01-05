@@ -2,7 +2,6 @@ global
     maxconn 10000
     ulimit-n 25000
     stats timeout 30s
-    log /dev/log local0 warning
     stats socket /run/haproxy.sock mode 600 expose-fd listeners level user
     tune.ssl.default-dh-param 2048
     ssl-default-bind-options no-sslv3 no-tlsv10
@@ -14,7 +13,6 @@ defaults
     option tcplog
     option clitcpka
     option dontlognull
-    option forwardfor
     timeout client 60s
     timeout server 600s
     timeout connect 5s
@@ -35,6 +33,7 @@ listen stats
 
 frontend swarm-router-http{{ range $port := split $.Env.HTTP_PORTS " " }}
     bind *:{{ $port }}{{ end }}
+    option forwardfor
     use_backend %[req.hdr(host),lower]
     default_backend swarm-router-http
 

@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,25 +14,18 @@ import (
 
 
 var (
-	rate     = time.Second
-	throttle = time.Tick(7 * rate)
+	throttle = time.Tick(7 * time.Second)
+	reloads = 0
+	backends = struct {
+		sync.RWMutex
+		active    bool
+		endpoints map[string]bool
+	}{endpoints: make(map[string]bool)}
 )
-
-
-var reloads = 0
-
-
-var backends = struct {
-	sync.RWMutex
-	active    bool
-	endpoints map[string]bool
-}{endpoints: make(map[string]bool)}
-
 
 func doneChan(done chan int) {
 	done <- 1
 }
-
 
 func reload() {
 	<-throttle
@@ -42,8 +34,8 @@ func reload() {
 	        log.Printf("recreate haproxy configuration")
 		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 
-        	log.Printf("reload haproxy: send SIGUSR2 to PID 1")
-	        syscall.Kill(1, syscall.SIGUSR2)
+        	log.Printf("reload haproxy: send SIGUSR2 to PID %d", pid)
+	        syscall.Kill(pid, syscall.SIGUSR2)
 
         	log.Printf("set backend status")
 		backends.active = true
@@ -53,15 +45,14 @@ func reload() {
 	}
 }
 
-
-func swarmRouter(done chan int, port int, handle func(net.Conn)) {
+func swarmRouter(done chan int, port string, handle func(net.Conn)) {
 	defer doneChan(done)
-	listener, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
+	listener, err := net.Listen("tcp", "127.0.0.1:" + port)
 	if err != nil {
 		log.Printf("Listening error: %s", err.Error())
 		return
 	}
-	log.Printf("Listening started on port: %d", port)
+	log.Printf("Listening started on port: %s", port)
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
@@ -71,7 +62,6 @@ func swarmRouter(done chan int, port int, handle func(net.Conn)) {
 		go handle(connection)
 	}
 }
-
 
 func addBackend(requestHeader string, encryption bool) {
 	defer cleanupBackends()
@@ -110,17 +100,17 @@ func cleanupBackends() {
 	}
 }
 
-func getBackendPort(requestHeader string, encryption bool) int {
-	backendPort := 0
+func getBackendPort(requestHeader string, encryption bool) string {
+	backendPort := "0"
 	if encryption {
 		// Set default tls port
 		backendPort = tlsBackendsDefaultPort
 		// Set special port if any
-		for i := range tlsBackendsPort {
-			if tlsBackendsPort[i] != "" {
-				backend, port, _ := net.SplitHostPort(tlsBackendsPort[i])
+		for _, portOverride := range strings.Split(tlsBackendsPort, " ") {
+			if portOverride != "" {
+				backend, port, _ := net.SplitHostPort(portOverride)
 				if strings.HasPrefix(requestHeader, backend) {
-					backendPort, _ = strconv.Atoi(port)
+					backendPort = port
 					break
 				}
 			}
@@ -129,11 +119,11 @@ func getBackendPort(requestHeader string, encryption bool) int {
 		// Set default http port
 		backendPort = httpBackendsDefaultPort
 		// Set special port if any
-		for i := range httpBackendsPort {
-			if httpBackendsPort[i] != "" {
-				backend, port, _ := net.SplitHostPort(httpBackendsPort[i])
+		for _, portOverride := range strings.Split(httpBackendsPort, " ") {
+			if portOverride != "" {
+				backend, port, _ := net.SplitHostPort(portOverride)
 				if strings.HasPrefix(requestHeader, backend) {
-					backendPort, _ = strconv.Atoi(port)
+					backendPort = port
 					break
 				}
 			}
@@ -146,9 +136,6 @@ func getBackendHostname(requestHeader string) string {
 	hostname := requestHeader
 	if strings.ContainsAny(hostname, ":") {
 		hostname, _, _ = net.SplitHostPort(hostname)
-	}
-	if !dnsBackendFqdn {
-		hostname = strings.Split(hostname, ".")[0]
 	}
 	if dnsBackendSuffix != "" {
 		hostname = hostname + dnsBackendSuffix
@@ -210,7 +197,7 @@ func httpHandler(downstream net.Conn) {
 		}
 	}
 	if isMember(hostnameHeader) {
-		upstream, err := net.Dial("tcp", getBackendHostname(hostnameHeader)+":"+strconv.Itoa(getBackendPort(hostnameHeader, false)))
+		upstream, err := net.Dial("tcp", getBackendHostname(hostnameHeader) + ":" + getBackendPort(hostnameHeader, false))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -223,7 +210,7 @@ func httpHandler(downstream net.Conn) {
 		}
 		go copy(upstream, reader)
 		go copy(downstream, upstream)
-		go addBackend(hostnameHeader, false)
+		addBackend(hostnameHeader, false)
 	} else {
 		downstream.Close()
 	}

@@ -13,7 +13,6 @@ import (
 
 var (
 	throttle = time.Tick(7 * time.Second)
-	reloads = 0
 	backends = struct {
 		sync.RWMutex
 		active    bool
@@ -29,7 +28,7 @@ func router() {
 
 func reload() {
 	<-throttle
-	if !backends.active || reloads == 0 {
+	if !backends.active {
 
 	        log.Printf("recreate haproxy configuration")
 		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
@@ -39,9 +38,6 @@ func reload() {
 
         	log.Printf("set backend status")
 		backends.active = true
-
-        	log.Printf("increment reloads counter at %d", reloads)
-		reloads++
 	}
 }
 
@@ -52,11 +48,10 @@ func newDirector(r *http.Request) func(*http.Request) {
 		if isMember(r.Host) {
 			addBackend(r.Host, false)
 		}
-                reqLog, err := httputil.DumpRequestOut(req, false)
+                _, err := httputil.DumpRequestOut(req, false)
                 if err != nil {
                         log.Printf("Got error %s\n %+v\n", err.Error(), req)
                 }
-                log.Println(string(reqLog))
         }
 }
 

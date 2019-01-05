@@ -15,6 +15,6 @@ FROM haproxy:1.8.16-alpine
 COPY files /
 COPY --from=build /files /
 
-EXPOSE 80 443 1111
+EXPOSE 80 8080 443 8443 1111
 
 RUN sed -r 's/(exec).+("\$@")/\1 swarm-router \2/g' -i docker-entrypoint.sh

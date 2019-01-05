@@ -1,8 +1,8 @@
 package main
 
 import (
-        "os"
-        "os/exec"
+	"os"
+	"os/exec"
 	"log"
 	"strings"
 )
@@ -32,6 +32,7 @@ var (
 )
 
 func getEnv(key, defaultValue string) string {
+	// get env vars eg. set if not present
 	value, exists := os.LookupEnv(key)
 	if !exists {
 		value = defaultValue
@@ -41,16 +42,15 @@ func getEnv(key, defaultValue string) string {
 }
 
 func init() {
-
 	// haproxy config
 	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 }
 
 func main() {
-
+	// start router
 	go router()
 
-	// Execute base image cmd
+	// start haproxy 
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
         cmd.Stdout = os.Stdout
         cmd.Stderr = os.Stderr

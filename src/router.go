@@ -1,17 +1,15 @@
 package main
 
 import (
-	"bufio"
-	"container/list"
-	"io"
 	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
         "syscall"
+        "net/http"
+        "net/http/httputil"
 )
-
 
 var (
 	throttle = time.Tick(7 * time.Second)
@@ -23,8 +21,10 @@ var (
 	}{endpoints: make(map[string]bool)}
 )
 
-func doneChan(done chan int) {
-	done <- 1
+func router() {
+
+        http.HandleFunc("/", proxyHandler)
+        log.Fatal(http.ListenAndServe(":" + httpSwarmRouterPort, nil))
 }
 
 func reload() {
@@ -45,22 +45,27 @@ func reload() {
 	}
 }
 
-func swarmRouter(done chan int, port string, handle func(net.Conn)) {
-	defer doneChan(done)
-	listener, err := net.Listen("tcp", "127.0.0.1:" + port)
-	if err != nil {
-		log.Printf("Listening error: %s", err.Error())
-		return
-	}
-	log.Printf("Listening started on port: %s", port)
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			log.Printf("Accept error: %s", err.Error())
-			return
+func newDirector(r *http.Request) func(*http.Request) {
+        return func(req *http.Request) {
+                req.URL.Scheme = "http"
+                req.URL.Host = r.Host + ":" + getBackendPort(r.Host, false)
+		if isMember(r.Host) {
+			addBackend(r.Host, false)
 		}
-		go handle(connection)
-	}
+                reqLog, err := httputil.DumpRequestOut(req, false)
+                if err != nil {
+                        log.Printf("Got error %s\n %+v\n", err.Error(), req)
+                }
+                log.Println(string(reqLog))
+        }
+}
+
+func proxyHandler(w http.ResponseWriter, r *http.Request) {
+        proxy := &httputil.ReverseProxy{
+                Transport: &http.Transport{},
+                Director:  newDirector(r),
+        }
+        proxy.ServeHTTP(w, r)
 }
 
 func addBackend(requestHeader string, encryption bool) {
@@ -167,51 +172,4 @@ func isMember(requestHeader string) bool {
 		}
 	}
 	return false
-}
-
-func copy(dst io.WriteCloser, src io.Reader) {
-	io.Copy(dst, src)
-	dst.Close()
-}
-
-
-func httpHandler(downstream net.Conn) {
-	reader := bufio.NewReader(downstream)
-	hostnameHeader := ""
-	readLines := list.New()
-	for hostnameHeader == "" {
-		bytes, _, err := reader.ReadLine()
-		if err != nil {
-			log.Printf("Error reading: %s", err.Error())
-			downstream.Close()
-			return
-		}
-		line := string(bytes)
-		readLines.PushBack(line)
-		if line == "" {
-			break
-		}
-		if strings.HasPrefix(line, "Host: ") {
-			hostnameHeader = strings.TrimPrefix(line, "Host: ")
-			break
-		}
-	}
-	if isMember(hostnameHeader) {
-		upstream, err := net.Dial("tcp", getBackendHostname(hostnameHeader) + ":" + getBackendPort(hostnameHeader, false))
-		if err != nil {
-			log.Printf("Backend connection error: %s", err.Error())
-			downstream.Close()
-			return
-		}
-		for element := readLines.Front(); element != nil; element = element.Next() {
-			line := element.Value.(string)
-			upstream.Write([]byte(line))
-			upstream.Write([]byte("\n"))
-		}
-		go copy(upstream, reader)
-		go copy(downstream, upstream)
-		addBackend(hostnameHeader, false)
-	} else {
-		downstream.Close()
-	}
 }

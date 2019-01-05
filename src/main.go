@@ -58,6 +58,7 @@ func main() {
 		log.Fatalf("Start error: %s", err.Error())
 	}
 	pid = cmd.Process.Pid
+	log.Printf("Started haproxy master process with pid: %d", pid)
 	err := cmd.Wait()
 	log.Printf("Exit error: %s", err.Error())
 }

@@ -68,44 +68,44 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
         proxy.ServeHTTP(w, r)
 }
 
-func addBackend(requestHeader string, encryption bool) {
+func addBackend(hostname string, encryption bool) {
 	defer cleanupBackends()
-	if _, exists := backends.endpoints[requestHeader]; !exists {
+	if _, exists := backends.endpoints[hostname]; !exists {
 		backends.Lock()
 		defer backends.Unlock()
-		backends.endpoints[requestHeader] = encryption
+		backends.endpoints[hostname] = encryption
 		backends.active = false
-		log.Printf("Adding %s to swarm-router", requestHeader)
+		log.Printf("Adding %s to swarm-router", hostname)
 		reload()
 	}
 }
 
-func delBackend(requestHeader string) {
+func delBackend(hostname string) {
 	defer cleanupBackends()
-	if _, exists := backends.endpoints[requestHeader]; exists {
+	if _, exists := backends.endpoints[hostname]; exists {
 		backends.Lock()
 		defer backends.Unlock()
-		delete(backends.endpoints, requestHeader)
+		delete(backends.endpoints, hostname)
 		backends.active = false
-		log.Printf("Removing %s from swarm-router", requestHeader)
+		log.Printf("Removing %s from swarm-router", hostname)
 		reload()
 	}
 }
 
 func cleanupBackends() {
-	for requestHeader := range backends.endpoints {
-		if !isMember(getBackendHostname(requestHeader)) {
+	for hostname := range backends.endpoints {
+		if !isMember(getBackendHostname(hostname)) {
 			backends.Lock()
 			defer backends.Unlock()
-			delete(backends.endpoints, requestHeader)
+			delete(backends.endpoints, hostname)
 			backends.active = false
-			log.Printf("Removing %s from swarm-router due to cleanup", requestHeader)
+			log.Printf("Removing %s from swarm-router due to cleanup", hostname)
 			reload()
 		}
 	}
 }
 
-func getBackendPort(requestHeader string, encryption bool) string {
+func getBackendPort(hostname string, encryption bool) string {
 	backendPort := "0"
 	if encryption {
 		// Set default tls port
@@ -114,7 +114,7 @@ func getBackendPort(requestHeader string, encryption bool) string {
 		for _, portOverride := range strings.Split(tlsBackendsPort, " ") {
 			if portOverride != "" {
 				backend, port, _ := net.SplitHostPort(portOverride)
-				if strings.HasPrefix(requestHeader, backend) {
+				if strings.HasPrefix(hostname, backend) {
 					backendPort = port
 					break
 				}
@@ -127,7 +127,7 @@ func getBackendPort(requestHeader string, encryption bool) string {
 		for _, portOverride := range strings.Split(httpBackendsPort, " ") {
 			if portOverride != "" {
 				backend, port, _ := net.SplitHostPort(portOverride)
-				if strings.HasPrefix(requestHeader, backend) {
+				if strings.HasPrefix(hostname, backend) {
 					backendPort = port
 					break
 				}
@@ -137,8 +137,7 @@ func getBackendPort(requestHeader string, encryption bool) string {
 	return backendPort
 }
 
-func getBackendHostname(requestHeader string) string {
-	hostname := requestHeader
+func getBackendHostname(hostname string) string {
 	if strings.ContainsAny(hostname, ":") {
 		hostname, _, _ = net.SplitHostPort(hostname)
 	}
@@ -148,9 +147,9 @@ func getBackendHostname(requestHeader string) string {
 	return hostname
 }
 
-func isMember(requestHeader string) bool {
+func isMember(hostname string) bool {
 	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(requestHeader))
+	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(hostname))
 	if err != nil {
 		log.Printf("Error resolving ip address: %s", err.Error())
 		return false
@@ -165,10 +164,10 @@ func isMember(requestHeader string) bool {
 		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
 			// Check if target ip is member of attached swarm networks
 			if ownIPNet.Contains(backendIPAddr.IP) {
-				//log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackendHostname(requestHeader), ownIPNet)
+				//log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackendHostname(hostname), ownIPNet)
 				return true
 			}
-			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackendHostname(requestHeader), ownIPNet)
+			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackendHostname(hostname), ownIPNet)
 		}
 	}
 	return false

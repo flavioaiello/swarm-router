@@ -11,13 +11,12 @@ var (
 	// haproxy master pid
 	pid = 0
 
-	// listener ports
-	httpPorts = getEnv("HTTP_PORTS", "80")
-	tlsPorts = getEnv("TLS_PORTS", "443")
+	// swarm listeners
+	httpListeners = getEnv("HTTP_LISTENERS", "80 8080")
+	tlsListeners = getEnv("TLS_LISTENERS", "443 8443")
 
-	// swarm router ports
-	httpSwarmRouterPort = getEnv("HTTP_SWARM_ROUTER_PORT", "10080")
-	tlsSwarmRouterPort = getEnv("TLS_SWARM_ROUTER_PORT", "10443")
+	// swarm router port
+	swarmRouterPort = getEnv("SWARM_ROUTER_PORT", "35353")
 
 	// backends default ports
 	httpBackendsDefaultPort = getEnv("HTTP_BACKENDS_DEFAULT_PORT", "8080")
@@ -48,7 +47,7 @@ func init() {
 
 func main() {
 	// start router
-	go router()
+	go router(swarmRouterPort)
 
 	// start haproxy 
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)

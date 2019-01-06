@@ -8,10 +8,9 @@ https://goreportcard.com/badge/github.com/flavioaiello/swarm-router)](https://go
 
 # Swarm-Router
 The «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang offering unique advantages:
-
-- Zero-copy using the splice syscall allowing real gbps throughput at very low cpu
+- Zero-copy using the tcp splicing syscall allowing real gbps throughput at very low cpu
 - No root privileges required
-- No socket mount required
+- No docker socket mount required
 - No external dependencies
 
 ## Scope
@@ -20,6 +19,11 @@ Solves common docker swarm mode large scale requirements:
 - TLS termination optionally with X.509 mutual auth
 - End to end encryption with TLS passthrough when using TLS encryption
 - Docker swarm mode stack isolation by swarm-router cascading
+
+## Modes
+- TLS Offload
+- TLS Forward
+- HTTP Forward
 
 ## Docker Swarm Mode 1.12+
 Built for docker swarm mode ingress networking: Secure service discovery using fqdn forwarding with dns resolution based on  embedded dns. Therefore there is no need to mount the docker socket and maintain labels on compose recipe. Just define your fully qualified service names per network as shown in the sample excerpts below.

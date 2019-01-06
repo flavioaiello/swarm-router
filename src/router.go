@@ -1,17 +1,19 @@
 package main
 
 import (
+	"container/list"
+	"io"
+	"bufio"
 	"log"
 	"net"
+	"net/textproto"
 	"strings"
 	"sync"
 	"time"
         "syscall"
-        "net/http"
-        "net/http/httputil"
 )
 
-var (
+var (	
 	throttle = time.Tick(7 * time.Second)
 	backends = struct {
 		sync.RWMutex
@@ -20,47 +22,103 @@ var (
 	}{endpoints: make(map[string]bool)}
 )
 
-func router() {
-
-        http.HandleFunc("/", proxyHandler)
-        log.Fatal(http.ListenAndServe(":" + httpSwarmRouterPort, nil))
-}
-
 func reload() {
 	<-throttle
 	if !backends.active {
-
-	        log.Printf("recreate haproxy configuration")
+		// generate configuration
+		log.Printf("recreate haproxy configuration")
 		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-
-        	log.Printf("reload haproxy: send SIGUSR2 to PID %d", pid)
-	        syscall.Kill(pid, syscall.SIGUSR2)
-
+		// reload
+		log.Printf("reload haproxy: send SIGUSR2 to PID %d", pid)
+		syscall.Kill(pid, syscall.SIGUSR2)
+		// set status
         	log.Printf("set backend status")
 		backends.active = true
 	}
 }
 
-func newDirector(r *http.Request) func(*http.Request) {
-        return func(req *http.Request) {
-                req.URL.Scheme = "http"
-                req.URL.Host = r.Host + ":" + getBackendPort(r.Host, false)
-		if isMember(r.Host) {
-			addBackend(r.Host, false)
+func router(port string) {
+	listener, err := net.Listen("tcp", "127.0.0.1:"+port)
+	if err != nil {
+		log.Printf("Listening error: %s", err.Error())
+		return
+	}
+	log.Printf("Listening started on port: %s", port)
+	for {
+		connection, err := listener.Accept()
+		if err != nil {
+			log.Printf("Accept error: %s", err.Error())
+			return
 		}
-                _, err := httputil.DumpRequestOut(req, false)
-                if err != nil {
-                        log.Printf("Got error %s\n %+v\n", err.Error(), req)
-                }
-        }
+		go handle(connection)
+	}
 }
 
-func proxyHandler(w http.ResponseWriter, r *http.Request) {
-        proxy := &httputil.ReverseProxy{
-                Transport: &http.Transport{},
-                Director:  newDirector(r),
-        }
-        proxy.ServeHTTP(w, r)
+func handle(downstream net.Conn) {
+	reader := bufio.NewReader(downstream)
+	tp := textproto.NewReader(reader)
+	readLines := list.New()
+	hostname := ""
+	for {
+		line, err := tp.ReadLine()
+		if err != nil {
+			log.Printf("Error reading: %s", err.Error())
+			downstream.Close()
+			return
+		}
+		readLines.PushBack(line)
+		if strings.HasPrefix(line, "Host: ") {
+			hostname = strings.TrimPrefix(line, "Host: ")
+			break
+		}
+	}
+	if isMember(hostname) {
+		upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+getBackendPort(hostname, false))
+		if err != nil {
+			log.Printf("Backend connection error: %s", err.Error())
+			downstream.Close()
+			return
+		}
+		for element := readLines.Front(); element != nil; element = element.Next() {
+			line := element.Value.(string)
+			upstream.Write([]byte(line))
+			upstream.Write([]byte("\n"))
+		}
+		go copy(upstream, reader)
+		go copy(downstream, upstream)
+		go addBackend(hostname, false)
+	} else {
+		downstream.Close()
+	}
+}
+
+func copy(dst io.WriteCloser, src io.Reader) {
+	io.Copy(dst, src)
+	dst.Close()
+}
+
+func isMember(hostname string) bool {
+	// Resolve target ip address for hostname
+	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(hostname))
+	if err != nil {
+		log.Printf("Error resolving target ip address: %s", err.Error())
+		return false
+	}
+	// Get swarm-router ip adresses
+	ownIPAddrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Printf("Error resolving own ip addresses: %s", err.Error())
+		return false
+	}
+	// Check if target ip is member of attached swarm networks
+	for _, ownIPAddr := range ownIPAddrs {
+		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
+			if ownIPNet.Contains(backendIPAddr.IP) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func addBackend(hostname string, encryption bool) {
@@ -71,7 +129,7 @@ func addBackend(hostname string, encryption bool) {
 		backends.endpoints[hostname] = encryption
 		backends.active = false
 		log.Printf("Adding %s to swarm-router", hostname)
-		reload()
+		go reload()
 	}
 }
 
@@ -83,7 +141,7 @@ func delBackend(hostname string) {
 		delete(backends.endpoints, hostname)
 		backends.active = false
 		log.Printf("Removing %s from swarm-router", hostname)
-		reload()
+		go reload()
 	}
 }
 
@@ -95,7 +153,7 @@ func cleanupBackends() {
 			delete(backends.endpoints, hostname)
 			backends.active = false
 			log.Printf("Removing %s from swarm-router due to cleanup", hostname)
-			reload()
+			go reload()
 		}
 	}
 }
@@ -140,30 +198,4 @@ func getBackendHostname(hostname string) string {
 		hostname = hostname + dnsBackendSuffix
 	}
 	return hostname
-}
-
-func isMember(hostname string) bool {
-	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(hostname))
-	if err != nil {
-		log.Printf("Error resolving ip address: %s", err.Error())
-		return false
-	}
-	// Get swarm-router ip adresses
-	ownIPAddrs, err := net.InterfaceAddrs()
-	if err != nil {
-		log.Printf("Error resolving own ip addresses: %s", err.Error())
-		return false
-	}
-	for _, ownIPAddr := range ownIPAddrs {
-		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
-			// Check if target ip is member of attached swarm networks
-			if ownIPNet.Contains(backendIPAddr.IP) {
-				//log.Printf("Target ip address %s for %s is part of swarm network %s", backendIPAddr.String(), getBackendHostname(hostname), ownIPNet)
-				return true
-			}
-			//log.Printf("Target ip address %s for %s is not part of swarm network %s", backendIPAddr.String(), getBackendHostname(hostname), ownIPNet)
-		}
-	}
-	return false
 }

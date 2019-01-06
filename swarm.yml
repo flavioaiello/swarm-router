@@ -5,12 +5,12 @@ services:
   swarm-router:
     image: swarm-router:latest
     environment:
-      - HTTP_PORTS=80
-      - TLS_PORTS=443
       - HTTP_BACKENDS_PORT=portainer:9000 nexus:8081 swarm-router:1111 whoami:8000
     ports:
       - "80:80"
+      - "8080:8080"
       - "443:443"
+      - "8443:8443"
       - "1111:1111"
     networks:
       default:
@@ -18,10 +18,10 @@ services:
     deploy:
       resources:
         reservations:
-          cpus: '0.05'
-          memory: 16M
+          cpus: '0.1'
+          memory: 128M
         limits:
-          memory: 16M
+          memory: 128M
       mode: replicated
       replicas: 1
       restart_policy:

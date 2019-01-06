@@ -17,8 +17,6 @@ defaults
     timeout server 600s
     timeout connect 5s
     timeout queue 30s
-    timeout http-request 5s
-    timeout http-keep-alive 30s
     default-server init-addr last,libc,none
 
 resolvers docker
@@ -48,5 +46,5 @@ backend swarm-router
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
     {{ if $encryption }}mode tcp{{ else }}mode http{{ end }}
-    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint $encryption }} check inter 15s resolvers docker
+    server {{ $endpoint }} {{ getHostnameOnly $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker
 {{ end }}

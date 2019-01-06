@@ -1,12 +1,11 @@
 package main
 
 import (
-	"container/list"
+	"bytes"
 	"io"
 	"bufio"
 	"log"
 	"net"
-	"net/textproto"
 	"strings"
 	"sync"
 	"time"
@@ -26,14 +25,16 @@ func reload() {
 	<-throttle
 	if !backends.active {
 		// generate configuration
-		log.Printf("recreate haproxy configuration")
+		log.Printf("generate haproxy configuration")
 		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-		// reload
-		log.Printf("reload haproxy: send SIGUSR2 to PID %d", pid)
+		// reload haproxy
+		log.Printf("reload haproxy SIGUSR2 PID %d", pid)
 		syscall.Kill(pid, syscall.SIGUSR2)
 		// set status
-        	log.Printf("set backend status")
+		log.Printf("backends activated")
+		backends.Lock()
 		backends.active = true
+		backends.Unlock()
 	}
 }
 
@@ -55,51 +56,51 @@ func router(port string) {
 }
 
 func handle(downstream net.Conn) {
+	var hostname string
+	var read []byte
 	reader := bufio.NewReader(downstream)
-	tp := textproto.NewReader(reader)
-	readLines := list.New()
-	hostname := ""
 	for {
-		line, err := tp.ReadLine()
+		line, _, err := reader.ReadLine()
 		if err != nil {
 			log.Printf("Error reading: %s", err.Error())
 			downstream.Close()
 			return
 		}
-		readLines.PushBack(line)
-		if strings.HasPrefix(line, "Host: ") {
-			hostname = strings.TrimPrefix(line, "Host: ")
+		read = append(read, line...)
+		read = append(read, "\n"...)
+		if bytes.HasPrefix(line, []byte("Host: ")) {
+			hostname = string(bytes.TrimPrefix(line, []byte("Host: ")))
 			break
 		}
 	}
 	if isMember(hostname) {
-		upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+getBackendPort(hostname, false))
+		upstream, err := net.Dial("tcp", getHostnameOnly(hostname)+":"+getBackendPort(hostname, false))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
 			return
 		}
-		for element := readLines.Front(); element != nil; element = element.Next() {
-			line := element.Value.(string)
-			upstream.Write([]byte(line))
-			upstream.Write([]byte("\n"))
-		}
-		go copy(upstream, reader)
-		go copy(downstream, upstream)
 		go addBackend(hostname, false)
+		log.Printf("Transient proxying: %s", hostname)
+		time.Sleep(500 * time.Millisecond)
+		go func() {
+			upstream.Write(read)
+			io.Copy(upstream, reader)
+			upstream.Close()
+		}()
+		time.Sleep(500 * time.Millisecond)
+		go func() {
+			io.Copy(downstream, upstream)
+			downstream.Close()
+		}()
 	} else {
 		downstream.Close()
 	}
 }
 
-func copy(dst io.WriteCloser, src io.Reader) {
-	io.Copy(dst, src)
-	dst.Close()
-}
-
 func isMember(hostname string) bool {
 	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", getBackendHostname(hostname))
+	backendIPAddr, err := net.ResolveIPAddr("ip", getHostnameOnly(hostname))
 	if err != nil {
 		log.Printf("Error resolving target ip address: %s", err.Error())
 		return false
@@ -147,7 +148,7 @@ func delBackend(hostname string) {
 
 func cleanupBackends() {
 	for hostname := range backends.endpoints {
-		if !isMember(getBackendHostname(hostname)) {
+		if !isMember(getHostnameOnly(hostname)) {
 			backends.Lock()
 			defer backends.Unlock()
 			delete(backends.endpoints, hostname)
@@ -159,7 +160,7 @@ func cleanupBackends() {
 }
 
 func getBackendPort(hostname string, encryption bool) string {
-	backendPort := "0"
+	var backendPort string
 	if encryption {
 		// Set default tls port
 		backendPort = tlsBackendsDefaultPort
@@ -190,7 +191,7 @@ func getBackendPort(hostname string, encryption bool) string {
 	return backendPort
 }
 
-func getBackendHostname(hostname string) string {
+func getHostnameOnly(hostname string) string {
 	if strings.ContainsAny(hostname, ":") {
 		hostname, _, _ = net.SplitHostPort(hostname)
 	}

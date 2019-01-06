@@ -82,13 +82,12 @@ func handle(downstream net.Conn) {
 		}
 		go addBackend(hostname, false)
 		log.Printf("Transient proxying: %s", hostname)
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		go func() {
 			upstream.Write(read)
 			io.Copy(upstream, reader)
 			upstream.Close()
 		}()
-		time.Sleep(500 * time.Millisecond)
 		go func() {
 			io.Copy(downstream, upstream)
 			downstream.Close()

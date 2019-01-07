@@ -43,11 +43,11 @@ services:
     deploy:
       resources:
         reservations:
-          cpus: '0.05'
-          memory: 256M
+          cpus: '0.5'
+          memory: 128M
         limits:
           cpus: '1.00'
-          memory: 256M
+          memory: 128M
       mode: replicated
       replicas: 1
       restart_policy:

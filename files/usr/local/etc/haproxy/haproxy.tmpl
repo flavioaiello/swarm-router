@@ -41,13 +41,7 @@ frontend swarm-router{{ range $port := split $.Env.HTTP_LISTENERS " " }}
     default_backend swarm-router
 
 backend swarm-router
-    mode http
-    option forceclose
-    option httpclose
-    option http-server-close
-    option http-pretend-keepalive
-    no option http-keep-alive
-    server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check
+    server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }}
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
     {{ if $encryption }}mode tcp{{ else }}mode http{{ end }}

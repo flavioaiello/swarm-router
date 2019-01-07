@@ -47,8 +47,7 @@ func init() {
 
 func main() {
 	// start router
-	go router(swarmRouterPort)
-
+	go start() 
 	// start haproxy 
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
         cmd.Stdout = os.Stdout
@@ -60,4 +59,10 @@ func main() {
 	log.Printf("Started haproxy master process with pid: %d", pid)
 	err := cmd.Wait()
 	log.Printf("Exit error: %s", err.Error())
+}
+
+func start() {
+	done := make(chan int)
+	router(done, swarmRouterPort)
+	<-done
 }

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-        "syscall"
+    "syscall"
 )
 
 var (	
@@ -38,7 +38,8 @@ func reload() {
 	}
 }
 
-func router(port string) {
+func router(done chan int, port string) {
+	defer doneChan(done)
 	listener, err := net.Listen("tcp", "127.0.0.1:"+port)
 	if err != nil {
 		log.Printf("Listening error: %s", err.Error())
@@ -53,6 +54,10 @@ func router(port string) {
 		}
 		go handle(connection)
 	}
+}
+
+func doneChan(done chan int) {
+	done <- 1
 }
 
 func handle(downstream net.Conn) {
@@ -80,9 +85,8 @@ func handle(downstream net.Conn) {
 			downstream.Close()
 			return
 		}
-		go addBackend(hostname, false)
 		log.Printf("Transient proxying: %s", hostname)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 		go func() {
 			upstream.Write(read)
 			io.Copy(upstream, reader)
@@ -92,6 +96,7 @@ func handle(downstream net.Conn) {
 			io.Copy(downstream, upstream)
 			downstream.Close()
 		}()
+		go addBackend(hostname, false)
 	} else {
 		downstream.Close()
 	}

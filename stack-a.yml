@@ -19,7 +19,7 @@ services:
           - whoami-i.localtest.me
           - whoami-j.localtest.me
           - whoami-k.localtest.me
-          - whoami-l.localtest.me
+          - whoami-m.localtest.me
     deploy:
       resources:
         reservations:
@@ -33,7 +33,6 @@ services:
         condition: any
         delay: 5s
         max_attempts: 10
-
 
 networks:
   default:

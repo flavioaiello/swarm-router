@@ -1,4 +1,5 @@
 global
+    log /dev/log local0 warning
     maxconn 10000
     ulimit-n 25000
     stats timeout 30s
@@ -8,13 +9,10 @@ global
     ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS
 
 defaults
-    log global
     mode tcp
-    option tcplog
-    option clitcpka
-    option dontlognull
+    log global
     timeout client 60s
-    timeout server 600s
+    timeout server 60s
     timeout connect 5s
     timeout queue 30s
     default-server init-addr last,libc,none
@@ -30,20 +28,18 @@ listen stats
     stats show-desc swarm-router status
     stats uri /
 
-frontend swarm-router{{ range $port := split $.Env.HTTP_LISTENERS " " }}
+frontend ingress{{ range $port := split $.Env.HTTP_LISTENERS " " }}
     bind *:{{ $port }}{{ end }}{{ range $port := split $.Env.TLS_LISTENERS " " }}
     bind *:{{ $port }} ssl crt /certs/{{ end }}
     tcp-request inspect-delay 5s
-    tcp-request content accept if { req.ssl_hello_type 1 }
-    use_backend %[req.hdr(host),lower]
-    use_backend %[req.ssl_sni,lower]
-    use_backend %[ssl_fc_sni,lower]
-    default_backend swarm-router
+    tcp-request content accept if { req.ssl_hello_type 1 }{{ range $endpoint, $encryption := $.Endpoints }}
+    use_backend {{ $endpoint }} if { hdr_dom(host) -i {{ $endpoint }} or req.ssl_sni,lower,field(1,':') -i {{ $endpoint }} }{{ end }}
+    default_backend swarm
 
-backend swarm-router
-    server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }}
+backend swarm
+    mode http
+    server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check backup
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
-    {{ if $encryption }}mode tcp{{ else }}mode http{{ end }}
     server {{ $endpoint }} {{ getHostnameOnly $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker
 {{ end }}

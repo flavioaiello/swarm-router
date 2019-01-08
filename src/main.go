@@ -12,8 +12,8 @@ var (
 	pid = 0
 
 	// swarm listeners
-	httpListeners = getEnv("HTTP_LISTENERS", "80 8080")
-	tlsListeners  = getEnv("TLS_LISTENERS", "443 8443")
+	httpPorts = getEnv("HTTP_PORTS", "80 8080")
+	tlsPorts  = getEnv("TLS_PORTS", "443 8443")
 
 	// swarm router port
 	swarmRouterPort = getEnv("SWARM_ROUTER_PORT", "35353")

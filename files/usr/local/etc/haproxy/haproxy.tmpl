@@ -31,8 +31,8 @@ listen stats
     stats show-desc swarm-router status
     stats uri /
 
-frontend ingress{{ range $port := split $.Env.HTTP_LISTENERS " " }}
-    bind *:{{ $port }}{{ end }}{{ range $port := split $.Env.TLS_LISTENERS " " }}
+frontend ingress{{ range $port := split $.Env.HTTP_PORTS " " }}
+    bind *:{{ $port }}{{ end }}{{ range $port := split $.Env.TLS_PORTS " " }}
     bind *:{{ $port }} ssl crt /certs/{{ end }}
     tcp-request inspect-delay 5s
     tcp-request content accept if { req.ssl_hello_type 1 }{{ range $endpoint, $encryption := $.Endpoints }}

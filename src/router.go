@@ -204,3 +204,13 @@ func getHostnameOnly(hostname string) string {
 	}
 	return hostname
 }
+
+func getIp(hostname string) string {
+	// Resolve target ip address for hostname
+	backendIPAddr, err := net.ResolveIPAddr("ip", getHostnameOnly(hostname))
+	if err != nil {
+		log.Printf("Error resolving target ip address: %s", err.Error())
+		return ""
+	}
+	return backendIPAddr.IP.String()
+}

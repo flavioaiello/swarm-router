@@ -1,5 +1,5 @@
 global
-    log /dev/log local0 warning
+    log stdout format raw daemon 
     maxconn 10000
     ulimit-n 25000
     stats timeout 30s
@@ -11,6 +11,9 @@ global
 defaults
     mode tcp
     log global
+    option splice-auto
+    option splice-request
+    option splice-response
     timeout client 60s
     timeout server 60s
     timeout connect 5s
@@ -41,5 +44,5 @@ backend swarm
     server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check backup
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
-    server {{ $endpoint }} {{ getHostnameOnly $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker
+    server {{ $endpoint }} {{ getIp $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker
 {{ end }}

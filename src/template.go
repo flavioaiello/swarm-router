@@ -28,6 +28,7 @@ func newTemplate(name string) *template.Template {
 		"splitN": strings.SplitN,
 		"getHostnameOnly": getHostnameOnly,
 		"getBackendPort": getBackendPort,
+		"getIp": getIp,
 	})
 	return tmpl
 }

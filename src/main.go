@@ -46,7 +46,7 @@ func init() {
 }
 
 func main() {
-	go syslog()
+
 	// start router
 	go start() 
 	// start haproxy 

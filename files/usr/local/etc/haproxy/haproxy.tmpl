@@ -37,9 +37,9 @@ frontend ingress{{ range $port := split $.Env.HTTP_LISTENERS " " }}
     tcp-request inspect-delay 5s
     tcp-request content accept if { req.ssl_hello_type 1 }{{ range $endpoint, $encryption := $.Endpoints }}
     use_backend {{ $endpoint }} if { hdr_dom(host) -i {{ $endpoint }} or req.ssl_sni,lower,field(1,':') -i {{ $endpoint }} }{{ end }}
-    default_backend swarm
+    default_backend swarm-router
 
-backend swarm
+backend swarm-router
     mode http
     server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check backup
 

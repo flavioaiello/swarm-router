@@ -24,11 +24,11 @@ func envMap() map[string]string {
 
 func newTemplate(name string) *template.Template {
 	tmpl := template.New(name).Funcs(template.FuncMap{
-		"split": strings.Split,
-		"splitN": strings.SplitN,
+		"split":           strings.Split,
+		"splitN":          strings.SplitN,
 		"getHostnameOnly": getHostnameOnly,
-		"getBackendPort": getBackendPort,
-		"getIp": getIp,
+		"getBackendPort":  getBackendPort,
+		"getIp":           getIp,
 	})
 	return tmpl
 }

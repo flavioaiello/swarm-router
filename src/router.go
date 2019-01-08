@@ -1,18 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"io"
-	"bufio"
 	"log"
 	"net"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
-    "syscall"
 )
 
-var (	
+var (
 	throttle = time.Tick(7 * time.Second)
 	backends = struct {
 		sync.RWMutex

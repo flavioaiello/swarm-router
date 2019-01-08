@@ -1,9 +1,9 @@
 package main
 
 import (
+	"log"
 	"os"
 	"os/exec"
-	"log"
 	"strings"
 )
 
@@ -13,18 +13,18 @@ var (
 
 	// swarm listeners
 	httpListeners = getEnv("HTTP_LISTENERS", "80 8080")
-	tlsListeners = getEnv("TLS_LISTENERS", "443 8443")
+	tlsListeners  = getEnv("TLS_LISTENERS", "443 8443")
 
 	// swarm router port
 	swarmRouterPort = getEnv("SWARM_ROUTER_PORT", "35353")
 
 	// backends default ports
 	httpBackendsDefaultPort = getEnv("HTTP_BACKENDS_DEFAULT_PORT", "8080")
-	tlsBackendsDefaultPort = getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443")
+	tlsBackendsDefaultPort  = getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443")
 
 	// backends port rules
 	httpBackendsPort = getEnv("HTTP_BACKENDS_PORT", "")
-	tlsBackendsPort = getEnv("TLS_BACKENDS_PORT", "")
+	tlsBackendsPort  = getEnv("TLS_BACKENDS_PORT", "")
 
 	// backend dns suffix
 	dnsBackendSuffix = getEnv("DNS_BACKEND_SUFFIX", "")
@@ -48,11 +48,11 @@ func init() {
 func main() {
 
 	// start router
-	go start() 
-	// start haproxy 
+	go start()
+	// start haproxy
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		log.Fatalf("Start error: %s", err.Error())
 	}

@@ -47,7 +47,7 @@ Execute `docker stack deploy -c swarm.yml swarm` to have a swarm-router (and por
 ```
 If you deploy multiple stacks, eg. for integration, testing and production, you will end up with a connnection mess. The integration api would randomly connect either the testing or production database in case the latter is also publishing a service. An alternative but not recommended could be ingress network port remapping. A stable and recommended mitigation is cascading swarm-router instances as shown in the next section. 
 
-### Ingress routing with stack isolation
+### Ingress routing with stack isolation as swarm and stack edge
 Providing an additional swarm-router offers isolation, thus the ability to deploy the same stack with different service names multiple times:
 ```
 docker stack deploy -c swarm.yml swarm

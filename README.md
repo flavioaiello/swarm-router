@@ -20,7 +20,7 @@ Solves common docker swarm mode requirements:
 - HTTP service forwarding
 - TLS service offloading eg. termination and forwarding
 - TLS service passthrough
-- Stackable as swarm or stack level edge ingress
+- Stackable as swarm or stack edge
 
 ## Docker Swarm Mode
 Built for docker swarm mode ingress networking: Secure service discovery based on fqdn claims and nameserver resolution. Therefore no need for docker socket mount or further labels on compose recipe. Just define your fully qualified service aliases per network as shown in the sample excerpts below.

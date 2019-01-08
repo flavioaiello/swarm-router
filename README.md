@@ -50,7 +50,7 @@ Simply get started by executing `docker stack deploy -c swarm.yml swarm` to have
 ```
 
 ### Ingress routing with isolated stacks
-Stack isolation when deploying multiple stacks is accomplished by stack edge routers so that service names collissions can be avoided.
+Stack isolation when deploying multiple stacks is accomplished by stack edge routers so that service name collissions can be avoided.
 
 ![Stack isolation](https://github.com/flavioaiello/swarm-router/blob/master/swarm-router.png?raw=true)
 

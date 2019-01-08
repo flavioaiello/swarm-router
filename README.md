@@ -7,26 +7,23 @@ https://img.shields.io/docker/automated/flavioaiello/swarm-router.svg)](https://
 https://goreportcard.com/badge/github.com/flavioaiello/swarm-router)](https://goreportcard.com/report/github.com/flavioaiello/swarm-router)
 
 # Swarm-Router
-The «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang offering unique advantages:
-- Zero-copy using the tcp splicing syscall allowing real gbps throughput at very low cpu
+This is the «zero config» ingress router for Docker swarm mode deployments, based on the mature and superior haproxy library and a little of golang offering unique advantages:
+- Zero-copy using tcp splice syscall for real gbps throughput at very low cpu
 - No root privileges required
-- No docker socket mount required
+- No docker socket mount required for service discovery
 - No external dependencies
 
 ## Scope
-Solves common docker swarm mode large scale requirements:
-- Port overlapping on HTTP and TLS when publishing by service FQDN endpoint
-- TLS termination optionally with X.509 mutual auth
-- End to end encryption with TLS passthrough when using TLS encryption
-- Docker swarm mode stack isolation by swarm-router cascading
+Solves common docker swarm mode requirements:
+- Port overlapping due to service name publishing 
+- Claim based service discovery
+- HTTP service forwarding
+- TLS service offloading eg. termination and forwarding
+- TLS service passthrough
+- Stackable as swarm or stack level edge ingress
 
-## Modes
-- TLS Offload
-- TLS Forward
-- HTTP Forward
-
-## Docker Swarm Mode 1.12+
-Built for docker swarm mode ingress networking: Secure service discovery using fqdn forwarding with dns resolution based on  embedded dns. Therefore there is no need to mount the docker socket and maintain labels on compose recipe. Just define your fully qualified service names per network as shown in the sample excerpts below.
+## Docker Swarm Mode
+Built for docker swarm mode ingress networking: Secure service discovery based on fqdn claims and nameserver resolution. Therefore no need for docker socket mount or further labels on compose recipe. Just define your fully qualified service aliases per network as shown in the sample excerpts below.
 
 ## Performance
 This one is built for high throughput and little CPU usage. Haproxy implements zero-copy and tcp-splicing based TCP handling. Golang based projects are lacking on those feature support: https://github.com/golang/go/issues/10948. (All golang based projects like Traefik etc. are also affected)
@@ -93,31 +90,23 @@ Incoming FQDN based hostnames that do NOT match the according serivce name, can 
         aliases:
           - myfancy
 ```
-#### Default ports
+#### Default service ports
 The default port for all backends which the router will connect and forward incoming connections.
 ```
 HTTP_BACKENDS_DEFAULT_PORT=8080
 TLS_BACKENDS_DEFAULT_PORT=8443
 ```
-#### Specific ports
+#### Override service ports
 Additional port for backends which will partly match the FQDN the router will connect and forward incoming connections.
 ```
 HTTP_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
 TLS_BACKENDS_PORT=<value> (optional: startswith;9000 startswithsomethigelse;9090)
 ```
 
-#### Insights
-If no backends are known to handle the request, but the FQDN is propagated by swarm, the connection will be forwarded to the swarm-router service listeners. The swarm-router default listeners do NO need any further configuration and will propagated to the default haproxy.tmpl configuration file.
-```
-HTTP_SWARM_ROUTER_PORT=10080 (default)
-TLS_SWARM_ROUTER_PORT=10443 (default)
-```
 ### TLS Encryption
 #### Termination
-Encryption can be optionally activated providing your fullchain certificate. This file should also contain your private key. Preferably this one should be mounted using docker secrets.
-```
-TLS_CERT=/data/certs/fullchain.pem
-```
+By adding your certs TLS will be automaticall configured. Encryption can be optionally activated providing your fullchain certificate. This file should also contain your private key. Preferably this one should be mounted using docker secrets.
+
+
 #### Todos
-- [ ] add tls (sni) passthrough
 - [ ] add termination with ACME autocerts

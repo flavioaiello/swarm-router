@@ -26,9 +26,8 @@ func newTemplate(name string) *template.Template {
 	tmpl := template.New(name).Funcs(template.FuncMap{
 		"split":           strings.Split,
 		"splitN":          strings.SplitN,
-		"getHostnameOnly": getHostnameOnly,
+		"getBackendHostname": getBackendHostname,
 		"getBackendPort":  getBackendPort,
-		"getIp":           getIp,
 	})
 	return tmpl
 }

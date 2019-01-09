@@ -38,6 +38,10 @@ func reload() {
 	}
 }
 
+func doneChan(done chan int) {
+	done <- 1
+}
+
 func router(done chan int, port string) {
 	defer doneChan(done)
 	listener, err := net.Listen("tcp", "127.0.0.1:"+port)
@@ -56,10 +60,6 @@ func router(done chan int, port string) {
 	}
 }
 
-func doneChan(done chan int) {
-	done <- 1
-}
-
 func handle(downstream net.Conn) {
 	var hostname string
 	var read []byte
@@ -75,17 +75,25 @@ func handle(downstream net.Conn) {
 		read = append(read, "\n"...)
 		if bytes.HasPrefix(line, []byte("Host: ")) {
 			hostname = string(bytes.TrimPrefix(line, []byte("Host: ")))
+			if strings.ContainsAny(hostname, ":") {
+				hostname, _, err = net.SplitHostPort(hostname)
+				if err != nil {
+					log.Printf("Error splitting hostname: %s", err.Error())
+					downstream.Close()
+					return
+				}
+			}
 			break
 		}
 	}
 	if isMember(hostname) {
-		upstream, err := net.Dial("tcp", getHostnameOnly(hostname)+":"+getBackendPort(hostname, false))
+		upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+getBackendPort(hostname, false))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
 			return
 		}
-		addBackend(getHostnameOnly(hostname), false)
+		addBackend(hostname, false)
 		log.Printf("Transient proxying: %s", hostname)
 		go func() {
 			upstream.Write(read)
@@ -102,65 +110,20 @@ func handle(downstream net.Conn) {
 	}
 }
 
-func isMember(hostname string) bool {
+func getIP(hostname string) net.IP {
 	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", getHostnameOnly(hostname))
+	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
 	if err != nil {
 		log.Printf("Error resolving target ip address: %s", err.Error())
-		return false
 	}
-	// Get swarm-router ip adresses
-	ownIPAddrs, err := net.InterfaceAddrs()
-	if err != nil {
-		log.Printf("Error resolving own ip addresses: %s", err.Error())
-		return false
-	}
-	// Check if target ip is member of attached swarm networks
-	for _, ownIPAddr := range ownIPAddrs {
-		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
-			if ownIPNet.Contains(backendIPAddr.IP) {
-				return true
-			}
-		}
-	}
-	return false
+	return backendIPAddr.IP
 }
 
-func addBackend(hostname string, encryption bool) {
-	defer cleanupBackends()
-	if _, exists := backends.endpoints[hostname]; !exists {
-		backends.Lock()
-		defer backends.Unlock()
-		backends.endpoints[hostname] = encryption
-		backends.active = false
-		log.Printf("Adding %s to swarm-router", hostname)
-		go reload()
+func getBackendHostname(hostname string) string {
+	if (fqdnBackendsHostname != "true") {
+		return strings.Split(hostname, ".")[0]
 	}
-}
-
-func delBackend(hostname string) {
-	defer cleanupBackends()
-	if _, exists := backends.endpoints[hostname]; exists {
-		backends.Lock()
-		defer backends.Unlock()
-		delete(backends.endpoints, hostname)
-		backends.active = false
-		log.Printf("Removing %s from swarm-router", hostname)
-		go reload()
-	}
-}
-
-func cleanupBackends() {
-	for hostname := range backends.endpoints {
-		if !isMember(getHostnameOnly(hostname)) {
-			backends.Lock()
-			defer backends.Unlock()
-			delete(backends.endpoints, hostname)
-			backends.active = false
-			log.Printf("Removing %s from swarm-router due to cleanup", hostname)
-			go reload()
-		}
-	}
+	return hostname
 }
 
 func getBackendPort(hostname string, encryption bool) string {
@@ -195,22 +158,59 @@ func getBackendPort(hostname string, encryption bool) string {
 	return backendPort
 }
 
-func getHostnameOnly(hostname string) string {
-	if strings.ContainsAny(hostname, ":") {
-		hostname, _, _ = net.SplitHostPort(hostname)
+func isMember(hostname string) bool {
+	// Resolve target ip address for hostname
+	backendIP := getIP(hostname)
+	// Get own ip adresses
+	ownIPAddrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Printf("Error resolving own ip addresses: %s", err.Error())
+		return false
 	}
-	if dnsBackendSuffix != "" {
-		hostname = hostname + dnsBackendSuffix
+	// Check if target ip is member of attached swarm networks
+	for _, ownIPAddr := range ownIPAddrs {
+		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
+			if ownIPNet.Contains(backendIP) {
+				return true
+			}
+		}
 	}
-	return hostname
+	return false
 }
 
-func getIp(hostname string) string {
-	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", getHostnameOnly(hostname))
-	if err != nil {
-		log.Printf("Error resolving target ip address: %s", err.Error())
-		return ""
+func addBackend(hostname string, encryption bool) {
+	defer cleanupBackends()
+	if _, exists := backends.endpoints[hostname]; !exists {
+		backends.Lock()
+		defer backends.Unlock()
+		backends.endpoints[hostname] = encryption
+		backends.active = false
+		log.Printf("Adding %s to swarm-router", hostname)
+		go reload()
 	}
-	return backendIPAddr.IP.String()
+}
+
+func delBackend(hostname string) {
+	defer cleanupBackends()
+	if _, exists := backends.endpoints[hostname]; exists {
+		backends.Lock()
+		defer backends.Unlock()
+		delete(backends.endpoints, hostname)
+		backends.active = false
+		log.Printf("Removing %s from swarm-router", hostname)
+		go reload()
+	}
+}
+
+func cleanupBackends() {
+	for hostname := range backends.endpoints {
+		if !isMember(hostname) {
+			backends.Lock()
+			defer backends.Unlock()
+			delete(backends.endpoints, hostname)
+			backends.active = false
+			log.Printf("Removing %s from swarm-router due to cleanup", hostname)
+			go reload()
+		}
+	}
 }

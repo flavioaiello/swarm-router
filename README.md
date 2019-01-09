@@ -57,6 +57,8 @@ Stack isolation when deploying multiple stacks is accomplished by stack edge rou
 ```
   stack-router:
     image: swarm-router:latest
+    Environment:
+      - FQDN_BACKENDS_HOSTNAME=false
     ports:
       - "8080:8080"
     networks:

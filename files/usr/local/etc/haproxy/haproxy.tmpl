@@ -44,5 +44,5 @@ backend swarm-router
     server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check backup
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
-    server {{ $endpoint }} {{ getIp $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker
+    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker
 {{ end }}

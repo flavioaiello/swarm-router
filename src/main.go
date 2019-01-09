@@ -26,8 +26,8 @@ var (
 	httpBackendsPort = getEnv("HTTP_BACKENDS_PORT", "")
 	tlsBackendsPort  = getEnv("TLS_BACKENDS_PORT", "")
 
-	// backend dns suffix
-	dnsBackendSuffix = getEnv("DNS_BACKEND_SUFFIX", "")
+	// fqdn backend hostname
+	fqdnBackendsHostname = getEnv("FQDN_BACKENDS_HOSTNAME", "true")
 )
 
 func getEnv(key, defaultValue string) string {
@@ -46,7 +46,6 @@ func init() {
 }
 
 func main() {
-
 	// start router
 	go start()
 	// start haproxy

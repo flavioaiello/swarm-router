@@ -41,7 +41,7 @@ frontend ingress{{ range $port := split $.Env.HTTP_PORTS " " }}
 
 backend swarm-router
     mode http
-    server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check backup
+    server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
     server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker

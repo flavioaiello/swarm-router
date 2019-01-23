@@ -35,8 +35,11 @@ frontend ingress{{ range $port := split $.Env.HTTP_PORTS " " }}
     bind *:{{ $port }}{{ end }}{{ range $port := split $.Env.TLS_PORTS " " }}
     bind *:{{ $port }} ssl crt /certs/{{ end }}
     tcp-request inspect-delay 5s
-    tcp-request content accept if { req.ssl_hello_type 1 }{{ range $endpoint, $encryption := $.Endpoints }}
-    use_backend {{ $endpoint }} if { hdr_dom(host) -i {{ $endpoint }} or req.ssl_sni,lower,field(1,':') -i {{ $endpoint }} }{{ end }}
+    tcp-request content accept if { req.ssl_hello_type 1 }
+    use_backend %[req.hdr(host),lower,field(1,':')]
+    use_backend %[req.ssl_sni,lower,field(1,':')]
+    #{{ range $endpoint, $encryption := $.Endpoints }}
+    #use_backend {{ $endpoint }} if { hdr_dom(host) -i {{ $endpoint }} or req.ssl_sni,lower,field(1,':') -i {{ $endpoint }} }{{ end }}
     default_backend swarm-router
 
 backend swarm-router

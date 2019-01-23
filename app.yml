@@ -1,25 +1,14 @@
-version: '3.2'
+version: '3.7'
 
 services:
 
-  whoami:
+  app:
     image: jwilder/whoami:latest
     networks:
       default:
       swarm_routing:
         aliases:
-          - whoami-a.localtest.me
-          - whoami-b.localtest.me
-          - whoami-c.localtest.me
-          - whoami-d.localtest.me
-          - whoami-e.localtest.me
-          - whoami-f.localtest.me
-          - whoami-g.localtest.me
-          - whoami-h.localtest.me
-          - whoami-i.localtest.me
-          - whoami-j.localtest.me
-          - whoami-k.localtest.me
-          - whoami-m.localtest.me
+          - app.localtest.me
     deploy:
       resources:
         reservations:

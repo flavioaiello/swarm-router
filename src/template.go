@@ -8,7 +8,7 @@ import (
 	"text/template"
 )
 
-type config struct {
+type conf struct {
 	Env       map[string]string
 	Endpoints map[string]bool
 }
@@ -33,7 +33,7 @@ func newTemplate(name string) *template.Template {
 }
 
 func executeTemplate(tmpl string, cfg string) {
-	config := new(config)
+	config := new(conf)
 	config.Env = envMap()
 	config.Endpoints = backends.endpoints
 

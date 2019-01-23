@@ -38,12 +38,7 @@ func reload() {
 	}
 }
 
-func doneChan(done chan int) {
-	done <- 1
-}
-
-func router(done chan int, port string) {
-	defer doneChan(done)
+func router(exit chan bool, port string) {
 	listener, err := net.Listen("tcp", "127.0.0.1:"+port)
 	if err != nil {
 		log.Printf("Listening error: %s", err.Error())
@@ -58,6 +53,7 @@ func router(done chan int, port string) {
 		}
 		go handle(connection)
 	}
+	exit <- true
 }
 
 func handle(downstream net.Conn) {
@@ -97,7 +93,7 @@ func handle(downstream net.Conn) {
 		log.Printf("Transient proxying: %s", hostname)
 		go func() {
 			upstream.Write(read)
-			io.Copy(upstream, reader)
+			io.Copy(upstream, downstream)
 			upstream.Close()
 		}()
 		go func() {

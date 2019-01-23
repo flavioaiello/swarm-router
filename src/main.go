@@ -40,15 +40,8 @@ func getEnv(key, defaultValue string) string {
 	return strings.TrimSpace(value)
 }
 
-func init() {
-	// haproxy config
-	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-}
+func haproxy (exit chan bool) {
 
-func main() {
-	// start router
-	go start()
-	// start haproxy
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -59,10 +52,18 @@ func main() {
 	log.Printf("Started haproxy master process with pid: %d", pid)
 	err := cmd.Wait()
 	log.Printf("Exit error: %s", err.Error())
+	exit <- true
 }
 
-func start() {
-	done := make(chan int)
-	router(done, swarmRouterPort)
-	<-done
+func init() {
+	// haproxy config
+	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 }
+
+func main() {
+    exit := make(chan bool, 1)
+    go router(exit, swarmRouterPort)
+    go haproxy(exit)
+	<-exit
+}
+

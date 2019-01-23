@@ -183,21 +183,20 @@ func getBackend(hostname string, encryption bool) string {
 	return backend
 }
 
-
 func searchBackend(hostname, defaultPorts, overridePorts string) string {
 	var backend string
 	fqdn := strings.Split(hostname, ".")
 	for i := range fqdn {
-		// check fqdn for service shortnames 
+		// check fqdn for service shortnames
 		hostname = strings.Join(fqdn[0:i+1], ".")
 		log.Printf("searchBackend hostname: %s", hostname)
 		// Search default port for fqdn
 		for _, searchPort := range strings.Split(defaultPorts, " ") {
 			if searchPort != "" {
-				upstream, _ := net.Dial("tcp", net.JoinHostPort(hostname,searchPort))
+				upstream, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
 				if upstream != nil {
 					upstream.Close()
-					backend = net.JoinHostPort(hostname,searchPort)
+					backend = net.JoinHostPort(hostname, searchPort)
 					return backend
 				}
 			}
@@ -207,7 +206,7 @@ func searchBackend(hostname, defaultPorts, overridePorts string) string {
 			if portOverride != "" {
 				backend, port, _ := net.SplitHostPort(portOverride)
 				if strings.HasPrefix(hostname, backend) {
-					backend = net.JoinHostPort(hostname,port) 
+					backend = net.JoinHostPort(hostname, port)
 					return backend
 				}
 			}

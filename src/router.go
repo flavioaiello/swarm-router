@@ -14,7 +14,7 @@ import (
 
 var (
 	throttle = time.Tick(7 * time.Second)
-	backends = struct {
+	routes = struct {
 		sync.RWMutex
 		active   bool
 		mappings map[string]string
@@ -23,7 +23,7 @@ var (
 
 func reload() {
 	<-throttle
-	if !backends.active {
+	if !routes.active {
 		// generate configuration
 		log.Printf("generate haproxy configuration")
 		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
@@ -31,10 +31,10 @@ func reload() {
 		log.Printf("reload haproxy SIGUSR2 PID %d", pid)
 		syscall.Kill(pid, syscall.SIGUSR2)
 		// set status
-		log.Printf("backends activated")
-		backends.Lock()
-		backends.active = true
-		backends.Unlock()
+		log.Printf("routes activated")
+		routes.Lock()
+		routes.active = true
+		routes.Unlock()
 	}
 }
 
@@ -90,7 +90,7 @@ func handle(downstream net.Conn) {
 			downstream.Close()
 			return
 		}
-		addBackend(hostname, backend)
+		addRoute(hostname, backend)
 		log.Printf("Transient proxying: %s", hostname)
 		go func() {
 			upstream.Write(read)
@@ -127,37 +127,37 @@ func isMember(hostname string) bool {
 	return false
 }
 
-func addBackend(hostname, backend string) {
-	defer cleanupBackends()
-	if _, exists := backends.mappings[hostname]; !exists {
-		backends.Lock()
-		defer backends.Unlock()
-		backends.mappings[hostname] = backend
-		backends.active = false
+func addRoute(hostname, backend string) {
+	defer cleanupRoutes()
+	if _, exists := routes.mappings[hostname]; !exists {
+		routes.Lock()
+		defer routes.Unlock()
+		routes.mappings[hostname] = backend
+		routes.active = false
 		log.Printf("Adding %s to swarm-router", hostname)
 		go reload()
 	}
 }
 
-func delBackend(hostname string) {
-	defer cleanupBackends()
-	if _, exists := backends.mappings[hostname]; exists {
-		backends.Lock()
-		defer backends.Unlock()
-		delete(backends.mappings, hostname)
-		backends.active = false
+func delRoute(hostname string) {
+	defer cleanupRoutes()
+	if _, exists := routes.mappings[hostname]; exists {
+		routes.Lock()
+		defer routes.Unlock()
+		delete(routes.mappings, hostname)
+		routes.active = false
 		log.Printf("Removing %s from swarm-router", hostname)
 		go reload()
 	}
 }
 
-func cleanupBackends() {
-	for hostname := range backends.mappings {
+func cleanupRoutes() {
+	for hostname := range routes.mappings {
 		if !isMember(hostname) {
-			backends.Lock()
-			defer backends.Unlock()
-			delete(backends.mappings, hostname)
-			backends.active = false
+			routes.Lock()
+			defer routes.Unlock()
+			delete(routes.mappings, hostname)
+			routes.active = false
 			log.Printf("Removing %s from swarm-router due to cleanup", hostname)
 			go reload()
 		}

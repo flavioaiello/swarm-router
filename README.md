@@ -23,64 +23,36 @@ Solves common docker swarm mode requirements:
 - Stackable as swarm or stack edge
 
 ## Docker Swarm
-Built for docker swarm mode ingress networking: Secure service discovery based on url claim nameserver resolution. Just define your service name urls as network alias names.
+Built for docker swarm mode `docker swarm init` ingress networking: Service discovery is based on claim resolution. Just define your service name urls as network alias names. Due to swarm lacking dns `SRV` support, port discovery is done by port discovery.
 
-## Ingress routing
-Simply get started by executing `docker stack deploy -c swarm.yml swarm` to have a swarm-router (and portainer for your convenience) up and running. Services can simply be exposed by network alias urls in case they listen on port `8080`. Port override can be done by `HTTP_BACKENDS_PORT` eg. `TLS_BACKENDS_PORT` by `startswith:<port>` pattern.
-
+## Mode 1 - Ingress routing
+Simply get started having a swarm-router up and running. Now attach and define your app urls. The according inner port will be discoverd automaticly.
 ```
-  swarm-router:
-    image: swarm-router:latest
-    ports:
-      - "80:80"
-      - "8080:8080"
-      - "443:443"
-      - "8443:8443"
-      - "1111:1111"
-    networks:
-      default:
-      routing:
-...
-  service:
-...
-    networks:
-      default:
-        aliases:
-          - myservice.localtest.me
+docker stack deploy -c swarm.yml swarm
+docker stack deploy -c app.yml app
 ```
 
-### Ingress routing with isolated stacks
-Stack isolation when deploying multiple stacks is accomplished by stack edge routers so that service name collissions can be avoided.
+## Mode 2 - Ingress routing with isolated stacks
+Deploying the same stack multiple times, eg. for development, testing and production, the service names collission can be avoided only by an additional router per stack. The according inner service name and port will be discoverd automaticly 
 
 ![Stack isolation](https://github.com/flavioaiello/swarm-router/blob/master/swarm-router.png?raw=true)
 
 ```
-  stack-router:
-    image: swarm-router:latest
-    Environment:
-      - FQDN_BACKENDS_HOSTNAME=false
-    ports:
-      - "8080:8080"
-    networks:
-      default:
-      routing:
-       - stack-router.mystack.localtest.me
-       - myfirstservice.mystack.localtest.me
-       - mysecondservice.mystack.localtest.me
-...
-  myfirstservice:
-    image: ...
-...
-  mysecondservice:
-    image: ...
-...
+docker stack deploy -c swarm.yml swarm
+docker stack deploy -c isolated.yml isolated
 ```
 
-Simply deploy the stacks below to have a two sample stacks and swarm-router (and portainer for your convenience as well) up and running.
+## Override port discovery
+Swarm-router does port discovery based on defaults below.
 ```
-docker stack deploy -c swarm.yml swarm
-docker stack deploy -c stack-a.yml astack
-docker stack deploy -c stack-b.yml bstack
+HTTP_BACKENDS_DEFAULT_PORTS=80 8000 8080 9000
+TLS_BACKENDS_DEFAULT_PORTS=443 8443
+```
+
+Alternatively specify port ovveride based on the url.
+```
+HTTP_BACKENDS_PORT=myapp:6457
+TLS_BACKENDS_PORT=myapp:45867
 ```
 
 ## Certificates

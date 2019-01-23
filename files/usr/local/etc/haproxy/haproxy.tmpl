@@ -36,8 +36,8 @@ frontend ingress{{ range $port := split $.Env.HTTP_PORTS " " }}
     bind *:{{ $port }}{{ end }}{{ range $port := split $.Env.TLS_PORTS " " }}
     bind *:{{ $port }} ssl crt /certs/{{ end }}
     tcp-request inspect-delay 5s
-    tcp-request content accept if { req.ssl_hello_type 1 }{{ range $endpoint, $encryption := $.Endpoints }}
-    use_backend {{ $endpoint }} if { hdr_dom(host) -i {{ $endpoint }} or req.ssl_sni,lower,field(1,':') -i {{ $endpoint }} }{{ end }}
+    tcp-request content accept if { req.ssl_hello_type 1 }{{ range $mapping, $backend := $.Mappings }}
+    use_backend {{ $mapping }} if { hdr_dom(host) -i {{ $mapping }} or req.ssl_sni,lower,field(1,':') -i {{ $mapping }} }{{ end }}
     #use_backend %[req.hdr(host),lower,field(1,':')]
     #use_backend %[req.ssl_sni,lower,field(1,':')]
     default_backend swarm-router
@@ -46,6 +46,6 @@ backend swarm-router
     mode http
     server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check
 
-{{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
-    server {{ $endpoint }} {{ getBackend $endpoint $encryption }} check resolvers docker
+{{ range $mapping, $backend := $.Mappings }}backend {{ $mapping }}
+    server {{ $mapping }} {{ $backend }} check resolvers docker
 {{ end }}

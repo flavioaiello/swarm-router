@@ -17,8 +17,8 @@ var (
 	backends = struct {
 		sync.RWMutex
 		active    bool
-		endpoints map[string]bool
-	}{endpoints: make(map[string]bool)}
+		mappings map[string]string
+	}{mappings: make(map[string]string)}
 )
 
 func reload() {
@@ -83,13 +83,14 @@ func handle(downstream net.Conn) {
 		}
 	}
 	if isMember(hostname) {
-		upstream, err := net.Dial("tcp", getBackend(hostname, false))
+		backend := getBackend(hostname)
+		upstream, err := net.Dial("tcp",backend)
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
 			return
 		}
-		addBackend(hostname, false)
+		addBackend(hostname, backend)
 		log.Printf("Transient proxying: %s", hostname)
 		go func() {
 			upstream.Write(read)
@@ -126,12 +127,12 @@ func isMember(hostname string) bool {
 	return false
 }
 
-func addBackend(hostname string, encryption bool) {
+func addBackend(hostname, backend string) {
 	defer cleanupBackends()
-	if _, exists := backends.endpoints[hostname]; !exists {
+	if _, exists := backends.mappings[hostname]; !exists {
 		backends.Lock()
 		defer backends.Unlock()
-		backends.endpoints[hostname] = encryption
+		backends.mappings[hostname] = backend
 		backends.active = false
 		log.Printf("Adding %s to swarm-router", hostname)
 		go reload()
@@ -140,10 +141,10 @@ func addBackend(hostname string, encryption bool) {
 
 func delBackend(hostname string) {
 	defer cleanupBackends()
-	if _, exists := backends.endpoints[hostname]; exists {
+	if _, exists := backends.mappings[hostname]; exists {
 		backends.Lock()
 		defer backends.Unlock()
-		delete(backends.endpoints, hostname)
+		delete(backends.mappings, hostname)
 		backends.active = false
 		log.Printf("Removing %s from swarm-router", hostname)
 		go reload()
@@ -151,11 +152,11 @@ func delBackend(hostname string) {
 }
 
 func cleanupBackends() {
-	for hostname := range backends.endpoints {
+	for hostname := range backends.mappings {
 		if !isMember(hostname) {
 			backends.Lock()
 			defer backends.Unlock()
-			delete(backends.endpoints, hostname)
+			delete(backends.mappings, hostname)
 			backends.active = false
 			log.Printf("Removing %s from swarm-router due to cleanup", hostname)
 			go reload()
@@ -172,18 +173,7 @@ func getBackendIP(hostname string) net.IP {
 	return backendIPAddr.IP
 }
 
-func getBackend(hostname string, encryption bool) string {
-	var backend string
-	if encryption {
-		backend = searchBackend(hostname, tlsBackendsDefaultPorts, tlsBackendsPort)
-
-	} else {
-		backend = searchBackend(hostname, httpBackendsDefaultPorts, httpBackendsPort)
-	}
-	return backend
-}
-
-func searchBackend(hostname, defaultPorts, overridePorts string) string {
+func getBackend(hostname string) string {
 	var backend string
 	fqdn := strings.Split(hostname, ".")
 	for i := range fqdn {
@@ -191,7 +181,7 @@ func searchBackend(hostname, defaultPorts, overridePorts string) string {
 		hostname = strings.Join(fqdn[0:i+1], ".")
 		log.Printf("searchBackend hostname: %s", hostname)
 		// Search default port for fqdn
-		for _, searchPort := range strings.Split(defaultPorts, " ") {
+		for _, searchPort := range strings.Split(defaultBackendPorts, " ") {
 			if searchPort != "" {
 				upstream, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
 				if upstream != nil {
@@ -202,7 +192,7 @@ func searchBackend(hostname, defaultPorts, overridePorts string) string {
 			}
 		}
 		// Set special port if any
-		for _, portOverride := range strings.Split(overridePorts, " ") {
+		for _, portOverride := range strings.Split(overrideBackendPorts, " ") {
 			if portOverride != "" {
 				backend, port, _ := net.SplitHostPort(portOverride)
 				if strings.HasPrefix(hostname, backend) {

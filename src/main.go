@@ -19,12 +19,10 @@ var (
 	swarmRouterPort = getEnv("SWARM_ROUTER_PORT", "35353")
 
 	// backends default ports
-	httpBackendsDefaultPorts = getEnv("HTTP_BACKENDS_DEFAULT_PORTS", "80 8000 8080 9000")
-	tlsBackendsDefaultPorts  = getEnv("TLS_BACKENDS_DEFAULT_PORTS", "443 8443")
+	defaultBackendPorts = getEnv("DEFAULT_BACKEND_PORTS", "80 443 8000 8080 8443 9000")
 
 	// backends port rules
-	httpBackendsPort = getEnv("HTTP_BACKENDS_PORT", "")
-	tlsBackendsPort  = getEnv("TLS_BACKENDS_PORT", "")
+	overrideBackendPorts = getEnv("OVERRIDE_BACKEND_PORTS", "")
 )
 
 func getEnv(key, defaultValue string) string {

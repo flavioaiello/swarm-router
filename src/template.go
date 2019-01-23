@@ -9,8 +9,8 @@ import (
 )
 
 type conf struct {
-	Env       map[string]string
-	Endpoints map[string]bool
+	Env      map[string]string
+	Mappings map[string]string
 }
 
 func envMap() map[string]string {
@@ -26,7 +26,6 @@ func newTemplate(name string) *template.Template {
 	tmpl := template.New(name).Funcs(template.FuncMap{
 		"split":      strings.Split,
 		"splitN":     strings.SplitN,
-		"getBackend": getBackend,
 	})
 	return tmpl
 }
@@ -34,7 +33,7 @@ func newTemplate(name string) *template.Template {
 func executeTemplate(tmpl string, cfg string) {
 	config := new(conf)
 	config.Env = envMap()
-	config.Endpoints = backends.endpoints
+	config.Mappings = backends.mappings
 
 	template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
 	if err != nil {

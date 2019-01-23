@@ -31,6 +31,8 @@ Simply get started having a swarm-router up and running. Now attach and define y
 docker stack deploy -c swarm.yml swarm
 docker stack deploy -c app.yml app
 ```
+Now the endpoints below should be reachable:
+- app.localtest.me
 
 ## Mode 2 - Ingress routing with isolated stacks
 Deploying the same stack multiple times, eg. for development, testing and production, the service names collission can be avoided only by an additional router per stack. The according inner service name and port will be discoverd automaticly 
@@ -39,8 +41,20 @@ Deploying the same stack multiple times, eg. for development, testing and produc
 
 ```
 docker stack deploy -c swarm.yml swarm
-docker stack deploy -c isolated.yml isolated
+docker stack deploy -c testing.yml testing
+docker stack deploy -c production.yml production
 ```
+Now the endpoints below should be reachable:
+
+Testing:
+- service.testing.localtest.me
+- api.testing.localtest.me
+
+Production:
+- service.localtest.me
+- api.localtest.me
+
+The inner communication of a stack can now be done with service shortnames eg. the service could reach simply a database using db as hostname. This makes portability of stages even simpler.
 
 ## Override port discovery
 Swarm-router does port discovery based on defaults below.

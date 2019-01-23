@@ -11,6 +11,7 @@ global
 defaults
     mode tcp
     log global
+    option dontlog-normal
     option splice-auto
     option splice-request
     option splice-response
@@ -46,5 +47,5 @@ backend swarm-router
     server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check backup
 
 {{ range $endpoint, $encryption := $.Endpoints }}backend {{ $endpoint }}
-    server {{ $endpoint }} {{ getBackendHostname $endpoint }}:{{ getBackendPort $endpoint $encryption }} check resolvers docker
+    server {{ $endpoint }} {{ getBackend $endpoint $encryption }} check resolvers docker
 {{ end }}

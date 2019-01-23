@@ -11,8 +11,8 @@ services:
       default:
       swarm_routing:
         aliases:
-          - app-a.localtest.me
-          - app-b.localtest.me
+          - service.testing.localtest.me
+          - api.testing.localtest.me
     healthcheck:
       test: nc -w 7 -zvv 0.0.0.0 1111
       interval: 30s
@@ -22,20 +22,15 @@ services:
       resources:
         reservations:
           cpus: '0.05'
-          memory: 8M
+          memory: 32M
         limits:
-          memory: 8M
-      mode: replicated
-      replicas: 1
+          memory: 32M
+      mode: global
       restart_policy:
         condition: any
-        delay: 5s
-        max_attempts: 10
 
-  app-a:
+  service:
     image: jwilder/whoami:latest
-    networks:
-      - default
     deploy:
       resources:
         reservations:
@@ -50,10 +45,24 @@ services:
         delay: 5s
         max_attempts: 10
 
-  app-b:
+  api:
     image: jwilder/whoami:latest
-    networks:
-      - default
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 8M
+        limits:
+          memory: 8M
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
+
+  db:
+    image: jwilder/whoami:latest
     deploy:
       resources:
         reservations:

@@ -1,0 +1,69 @@
+version: '3.7'
+
+services:
+
+  swarm-router:
+    image: swarm-router:latest
+    environment:
+      - HTTP_PORTS=8080
+      - TLS_PORTS=8443
+    networks:
+      default:
+      swarm_routing:
+        aliases:
+          - service.localtest.me
+          - api.localtest.me
+    healthcheck:
+      test: nc -w 7 -zvv 0.0.0.0 1111
+      interval: 30s
+      timeout: 30s
+      retries: 20
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+        limits:
+          memory: 32M
+      mode: global
+      restart_policy:
+        condition: any
+
+  service:
+    image: jwilder/whoami:latest
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 8M
+        limits:
+          memory: 8M
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
+
+  api:
+    image: jwilder/whoami:latest
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 8M
+        limits:
+          memory: 8M
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
+
+networks:
+  default:
+    internal: true
+    driver: overlay
+  swarm_routing:
+    external: true

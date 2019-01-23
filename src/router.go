@@ -83,7 +83,7 @@ func handle(downstream net.Conn) {
 		}
 	}
 	if isMember(hostname) {
-		upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+getBackendPort(hostname, false))
+		upstream, err := net.Dial("tcp", getBackend(hostname, false))
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()
@@ -93,7 +93,7 @@ func handle(downstream net.Conn) {
 		log.Printf("Transient proxying: %s", hostname)
 		go func() {
 			upstream.Write(read)
-			io.Copy(upstream, downstream)
+			io.Copy(upstream, reader)
 			upstream.Close()
 		}()
 		go func() {
@@ -106,71 +106,9 @@ func handle(downstream net.Conn) {
 	}
 }
 
-func getIP(hostname string) net.IP {
-	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
-	if err != nil {
-		log.Printf("Error resolving target ip address: %s", err.Error())
-	}
-	return backendIPAddr.IP
-}
-
-func getBackendHostname(hostname string) string {
-	if (fqdnBackendsHostname != "true") {
-		return strings.Split(hostname, ".")[0]
-	}
-	return hostname
-}
-
-func getBackendPort(hostname string, encryption bool) string {
-	var backendPort string
-	if encryption {
-		// Search default tls port
-		for _, searchPort := range strings.Split(tlsBackendsDefaultPorts, " ") {
-			if searchPort != "" {
-				upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+searchPort)
-				if err == nil {
-					backendPort = searchPort 
-				}
-			}
-		}
-		// Set special port if any
-		for _, portOverride := range strings.Split(tlsBackendsPort, " ") {
-			if portOverride != "" {
-				backend, port, _ := net.SplitHostPort(portOverride)
-				if strings.HasPrefix(hostname, backend) {
-					backendPort = port
-					break
-				}
-			}
-		}
-	} else {
-		// Search default http port
-		for _, searchPort := range strings.Split(httpBackendsDefaultPorts, " ") {
-			if searchPort != "" {
-				upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+searchPort)
-				if err == nil {
-					backendPort = searchPort 
-				}
-			}
-		}
-		// Set special port if any
-		for _, portOverride := range strings.Split(httpBackendsPort, " ") {
-			if portOverride != "" {
-				backend, port, _ := net.SplitHostPort(portOverride)
-				if strings.HasPrefix(hostname, backend) {
-					backendPort = port
-					break
-				}
-			}
-		}
-	}
-	return backendPort
-}
-
 func isMember(hostname string) bool {
 	// Resolve target ip address for hostname
-	backendIP := getIP(hostname)
+	backendIP := getBackendIP(hostname)
 	// Get own ip adresses
 	ownIPAddrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -223,4 +161,57 @@ func cleanupBackends() {
 			go reload()
 		}
 	}
+}
+
+func getBackendIP(hostname string) net.IP {
+	// Resolve target ip address for hostname
+	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
+	if err != nil {
+		log.Printf("Error resolving target ip address: %s", err.Error())
+	}
+	return backendIPAddr.IP
+}
+
+func getBackend(hostname string, encryption bool) string {
+	var backend string
+	if encryption {
+		backend = searchBackend(hostname, tlsBackendsDefaultPorts, tlsBackendsPort)
+
+	} else {
+		backend = searchBackend(hostname, httpBackendsDefaultPorts, httpBackendsPort)
+	}
+	return backend
+}
+
+
+func searchBackend(hostname, defaultPorts, overridePorts string) string {
+	var backend string
+	fqdn := strings.Split(hostname, ".")
+	for i := range fqdn {
+		// check fqdn for service shortnames 
+		hostname = strings.Join(fqdn[0:i+1], ".")
+		log.Printf("searchBackend hostname: %s", hostname)
+		// Search default port for fqdn
+		for _, searchPort := range strings.Split(defaultPorts, " ") {
+			if searchPort != "" {
+				upstream, _ := net.Dial("tcp", net.JoinHostPort(hostname,searchPort))
+				if upstream != nil {
+					upstream.Close()
+					backend = net.JoinHostPort(hostname,searchPort)
+					return backend
+				}
+			}
+		}
+		// Set special port if any
+		for _, portOverride := range strings.Split(overridePorts, " ") {
+			if portOverride != "" {
+				backend, port, _ := net.SplitHostPort(portOverride)
+				if strings.HasPrefix(hostname, backend) {
+					backend = net.JoinHostPort(hostname,port) 
+					return backend
+				}
+			}
+		}
+	}
+	return backend
 }

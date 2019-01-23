@@ -33,7 +33,7 @@ func newTemplate(name string) *template.Template {
 func executeTemplate(tmpl string, cfg string) {
 	config := new(conf)
 	config.Env = envMap()
-	config.Mappings = backends.mappings
+	config.Mappings = routes.mappings
 
 	template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
 	if err != nil {

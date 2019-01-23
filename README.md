@@ -23,7 +23,7 @@ Solves common docker swarm mode requirements:
 - Stackable as swarm or stack edge
 
 ## Docker Swarm
-Built for docker swarm mode `docker swarm init` ingress networking: Service discovery is based on claim resolution. Just define your service name urls as network alias names. Due to swarm lacking dns `SRV` support, port discovery is done by port discovery.
+Built for docker swarm mode `docker swarm init` ingress networking: Service discovery is based on claim resolution. Just define your service name urls as network alias names. Due to swarm lacking dns `SRV` support, port discovery is done by automatic port enumeration based on a default port list.
 
 ## Mode 1 - Ingress routing
 Simply get started having a swarm-router up and running. Now attach and define your app urls. The according inner port will be discoverd automaticly.

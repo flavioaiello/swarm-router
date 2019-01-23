@@ -37,7 +37,7 @@ func getEnv(key, defaultValue string) string {
 	return strings.TrimSpace(value)
 }
 
-func haproxy (exit chan bool) {
+func haproxy(exit chan bool) {
 
 	cmd := exec.Command(os.Args[1], os.Args[2:]...)
 	cmd.Stdout = os.Stdout
@@ -58,9 +58,8 @@ func init() {
 }
 
 func main() {
-    exit := make(chan bool, 1)
-    go router(exit, swarmRouterPort)
-    go haproxy(exit)
+	exit := make(chan bool, 1)
+	go router(exit, swarmRouterPort)
+	go haproxy(exit)
 	<-exit
 }
-

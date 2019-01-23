@@ -14,7 +14,7 @@ import (
 
 var (
 	throttle = time.Tick(7 * time.Second)
-	routes = struct {
+	routes   = struct {
 		sync.RWMutex
 		active   bool
 		mappings map[string]string

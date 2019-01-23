@@ -125,8 +125,15 @@ func getBackendHostname(hostname string) string {
 func getBackendPort(hostname string, encryption bool) string {
 	var backendPort string
 	if encryption {
-		// Set default tls port
-		backendPort = tlsBackendsDefaultPort
+		// Search default tls port
+		for _, searchPort := range strings.Split(tlsBackendsDefaultPorts, " ") {
+			if searchPort != "" {
+				upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+searchPort)
+				if err == nil {
+					backendPort = searchPort 
+				}
+			}
+		}
 		// Set special port if any
 		for _, portOverride := range strings.Split(tlsBackendsPort, " ") {
 			if portOverride != "" {
@@ -138,8 +145,15 @@ func getBackendPort(hostname string, encryption bool) string {
 			}
 		}
 	} else {
-		// Set default http port
-		backendPort = httpBackendsDefaultPort
+		// Search default http port
+		for _, searchPort := range strings.Split(httpBackendsDefaultPorts, " ") {
+			if searchPort != "" {
+				upstream, err := net.Dial("tcp", getBackendHostname(hostname)+":"+searchPort)
+				if err == nil {
+					backendPort = searchPort 
+				}
+			}
+		}
 		// Set special port if any
 		for _, portOverride := range strings.Split(httpBackendsPort, " ") {
 			if portOverride != "" {

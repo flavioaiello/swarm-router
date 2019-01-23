@@ -19,15 +19,12 @@ var (
 	swarmRouterPort = getEnv("SWARM_ROUTER_PORT", "35353")
 
 	// backends default ports
-	httpBackendsDefaultPort = getEnv("HTTP_BACKENDS_DEFAULT_PORT", "8080")
-	tlsBackendsDefaultPort  = getEnv("TLS_BACKENDS_DEFAULT_PORT", "8443")
+	httpBackendsDefaultPorts = getEnv("HTTP_BACKENDS_DEFAULT_PORTS", "80 8000 8080 9000")
+	tlsBackendsDefaultPorts  = getEnv("TLS_BACKENDS_DEFAULT_PORTS", "443 8443")
 
 	// backends port rules
 	httpBackendsPort = getEnv("HTTP_BACKENDS_PORT", "")
 	tlsBackendsPort  = getEnv("TLS_BACKENDS_PORT", "")
-
-	// fqdn backend hostname
-	fqdnBackendsHostname = getEnv("FQDN_BACKENDS_HOSTNAME", "true")
 )
 
 func getEnv(key, defaultValue string) string {

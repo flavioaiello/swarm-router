@@ -73,7 +73,7 @@ TLS_BACKENDS_PORT=myapp:45867
 When TLS offloading comes into action, according fullchain certificates containing the private key should be provisioned on `/certs` host volume mount as `service.com.pem`. Preferably this one should be mounted using docker secrets.
 
 ## Performance
-This one is built for high throughput and little CPU usage. Haproxy implements zero-copy and tcp-splicing based TCP handling. Golang based projects are lacking on those feature support: https://github.com/golang/go/issues/10948. (All golang based projects like Traefik etc. are also affected)
+This one is built for high throughput and little CPU usage. Haproxy implements zero-copy and tcp-splicing based TCP handling. Even with golang now supporting [splicing](https://github.com/golang/go/issues/10948), haproxy is ways more superior in terms of cpu consumption and latency.
 
 #### Todos
 - [ ] add termination with ACME autocerts

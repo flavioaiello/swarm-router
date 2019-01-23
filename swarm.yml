@@ -3,7 +3,7 @@ version: '3.7'
 services:
 
   swarm-router:
-    image: swarm-router:latest
+    image: flavioaiello/swarm-router:latest
     ports:
       - "80:80"
       - "8080:8080"

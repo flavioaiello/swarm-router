@@ -3,7 +3,7 @@ version: '3.7'
 services:
 
   swarm-router:
-    image: swarm-router:latest
+    image: flavioaiello/swarm-router:latest
     environment:
       - HTTP_PORTS=8080
       - TLS_PORTS=8443

@@ -57,16 +57,13 @@ Production:
 The inner communication of a stack can now be done with service shortnames eg. the service could reach simply a database using db as hostname. This makes portability of stages even simpler.
 
 ## Override port discovery
-Swarm-router does port discovery based on defaults below.
+Swarm-router does port discovery based on a default port list:
 ```
-HTTP_BACKENDS_DEFAULT_PORTS=80 8000 8080 9000
-TLS_BACKENDS_DEFAULT_PORTS=443 8443
+DEFAULT_BACKEND_PORTS=80 443 8000 8080 8443 9000
 ```
-
-Alternatively specify port ovveride based on the url.
+Alternatively port ovveride based on url `startswith` is possible:
 ```
-HTTP_BACKENDS_PORT=myapp:6457
-TLS_BACKENDS_PORT=myapp:45867
+OVERRIDE_BACKEND_PORTS=myapp:6457 myotherapp:7465
 ```
 
 ## Certificates

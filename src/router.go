@@ -16,7 +16,7 @@ var (
 	throttle = time.Tick(7 * time.Second)
 	backends = struct {
 		sync.RWMutex
-		active    bool
+		active   bool
 		mappings map[string]string
 	}{mappings: make(map[string]string)}
 )
@@ -84,7 +84,7 @@ func handle(downstream net.Conn) {
 	}
 	if isMember(hostname) {
 		backend := getBackend(hostname)
-		upstream, err := net.Dial("tcp",backend)
+		upstream, err := net.Dial("tcp", backend)
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
 			downstream.Close()

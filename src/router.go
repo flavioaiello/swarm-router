@@ -109,7 +109,11 @@ func handle(downstream net.Conn) {
 
 func isMember(hostname string) bool {
 	// Resolve target ip address for hostname
-	backendIP := getBackendIP(hostname)
+	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
+	if err != nil {
+		log.Printf("Error resolving target ip address: %s", err.Error())
+		return false
+	}
 	// Get own ip adresses
 	ownIPAddrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -119,7 +123,7 @@ func isMember(hostname string) bool {
 	// Check if target ip is member of attached swarm networks
 	for _, ownIPAddr := range ownIPAddrs {
 		if ownIPNet, state := ownIPAddr.(*net.IPNet); state && !ownIPNet.IP.IsLoopback() && ownIPNet.IP.To4() != nil {
-			if ownIPNet.Contains(backendIP) {
+			if ownIPNet.Contains(backendIPAddr.IP) {
 				return true
 			}
 		}
@@ -164,15 +168,6 @@ func cleanupRoutes() {
 	}
 }
 
-func getBackendIP(hostname string) net.IP {
-	// Resolve target ip address for hostname
-	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
-	if err != nil {
-		log.Printf("Error resolving target ip address: %s", err.Error())
-	}
-	return backendIPAddr.IP
-}
-
 func getBackend(hostname string) string {
 	var backend string
 	fqdn := strings.Split(hostname, ".")
@@ -180,24 +175,26 @@ func getBackend(hostname string) string {
 		// check fqdn for service shortnames
 		hostname = strings.Join(fqdn[0:i+1], ".")
 		log.Printf("searchBackend hostname: %s", hostname)
-		// Search default port for fqdn
-		for _, searchPort := range strings.Split(defaultBackendPorts, " ") {
-			if searchPort != "" {
-				upstream, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
-				if upstream != nil {
-					upstream.Close()
-					backend = net.JoinHostPort(hostname, searchPort)
-					return backend
+		if isMember(hostname) {
+			// Search default port for fqdn
+			for _, searchPort := range strings.Split(defaultBackendPorts, " ") {
+				if searchPort != "" {
+					upstream, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
+					if upstream != nil {
+						upstream.Close()
+						backend = net.JoinHostPort(hostname, searchPort)
+						return backend
+					}
 				}
 			}
-		}
-		// Set special port if any
-		for _, portOverride := range strings.Split(overrideBackendPorts, " ") {
-			if portOverride != "" {
-				backend, port, _ := net.SplitHostPort(portOverride)
-				if strings.HasPrefix(hostname, backend) {
-					backend = net.JoinHostPort(hostname, port)
-					return backend
+			// Set special port if any
+			for _, portOverride := range strings.Split(overrideBackendPorts, " ") {
+				if portOverride != "" {
+					backend, port, _ := net.SplitHostPort(portOverride)
+					if strings.HasPrefix(hostname, backend) {
+						backend = net.JoinHostPort(hostname, port)
+						return backend
+					}
 				}
 			}
 		}

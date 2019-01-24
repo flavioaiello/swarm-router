@@ -134,7 +134,7 @@ func addRoute(hostname, backend string) {
 		defer routes.Unlock()
 		routes.mappings[hostname] = backend
 		routes.active = false
-		log.Printf("Adding %s to swarm-router", hostname)
+		log.Printf("Adding hostname %s with backend %s to swarm-router", hostname, backend)
 		go reload()
 	}
 }

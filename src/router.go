@@ -56,15 +56,15 @@ func router(exit chan bool, port string) {
 	exit <- true
 }
 
-func handle(downstream net.Conn) {
+func handle(srcConn net.Conn) {
 	var hostname string
 	var read []byte
-	reader := bufio.NewReader(downstream)
+	defer srcConn.Close()
+	reader := bufio.NewReader(srcConn)
 	for {
 		line, _, err := reader.ReadLine()
 		if err != nil {
 			log.Printf("Error reading: %s", err.Error())
-			downstream.Close()
 			return
 		}
 		read = append(read, line...)
@@ -75,7 +75,6 @@ func handle(downstream net.Conn) {
 				hostname, _, err = net.SplitHostPort(hostname)
 				if err != nil {
 					log.Printf("Error splitting hostname: %s", err.Error())
-					downstream.Close()
 					return
 				}
 			}
@@ -84,26 +83,26 @@ func handle(downstream net.Conn) {
 	}
 	if isMember(hostname) {
 		backend := getBackend(hostname)
-		upstream, err := net.Dial("tcp", backend)
+		dstConn, err := net.Dial("tcp", backend)
 		if err != nil {
 			log.Printf("Backend connection error: %s", err.Error())
-			downstream.Close()
 			return
 		}
-		addRoute(hostname, backend)
-		log.Printf("Transient proxying: %s", hostname)
-		go func() {
-			upstream.Write(read)
-			io.Copy(upstream, reader)
-			upstream.Close()
-		}()
-		go func() {
-			io.Copy(downstream, upstream)
-			log.Printf("Closing transient downstream")
-			downstream.Close()
-		}()
-	} else {
-		downstream.Close()
+		defer dstConn.Close()
+		errc := make(chan error, 1)
+		go func(chan<- error) {
+			log.Printf("Transient proxying: %s", hostname)
+			addRoute(hostname, backend)
+			dstConn.Write(read)
+			_, err := io.Copy(dstConn, reader)
+			errc <- err
+		}(errc)
+		go func(chan<- error) {
+			_, err := io.Copy(srcConn, dstConn)
+			log.Printf("Closing transient proxy")
+			errc <- err
+		}(errc)
+		<-errc
 	}
 }
 
@@ -179,9 +178,9 @@ func getBackend(hostname string) string {
 			// Search default port for fqdn
 			for _, searchPort := range strings.Split(defaultBackendPorts, " ") {
 				if searchPort != "" {
-					upstream, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
-					if upstream != nil {
-						upstream.Close()
+					dstConn, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
+					if dstConn != nil {
+						dstConn.Close()
 						backend = net.JoinHostPort(hostname, searchPort)
 						return backend
 					}

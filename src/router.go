@@ -10,19 +10,26 @@ import (
 	"syscall"
         "os"
 	"runtime"
+	"sync"
+)
+
+var (
+	once sync.Once
 )
 
 func reload() {
-	// generate configuration
-	log.Printf("generate haproxy configuration")
-	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
+	once.Do(func() {
+		// generate configuration
+		log.Printf("generate haproxy configuration")
+		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 
-	// reload haproxy
-	log.Printf("reload haproxy SIGUSR2 PID %d", pid)
-	syscall.Kill(pid, syscall.SIGUSR2)
+		// reload haproxy
+		log.Printf("reload haproxy SIGUSR2 PID %d", pid)
+		syscall.Kill(pid, syscall.SIGUSR2)
 
-	// set status
-	log.Printf("routes activated")
+		// set status
+		log.Printf("routes activated")
+	})
 }
 
 func router(exit chan bool, port string) {
@@ -89,9 +96,9 @@ func handle(srcConn net.Conn) {
 			log.Printf("Closing transient proxy")
 			errc <- err
 		}(errc)
-		<-errc
 		os.Setenv("BE_" + hostname, backend)
 		reload()
+		<-errc
 	}
 	log.Printf("Running go routines: %d", runtime.NumGoroutine())
 }

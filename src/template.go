@@ -26,8 +26,7 @@ func backendMap() map[string]string {
 	m := make(map[string]string)
 	for _, kv := range os.Environ() {
 		if strings.HasPrefix(kv, "BE_") {
-			kv = kv[3:]
-			x := strings.SplitN(kv, "=", 2)
+			x := strings.SplitN(kv[3:], "=", 2)
 			m[x[0]] = x[1]
 		}
 	}

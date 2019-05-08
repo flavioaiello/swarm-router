@@ -7,35 +7,22 @@ import (
 	"log"
 	"net"
 	"strings"
-	"sync"
 	"syscall"
-	"time"
-)
-
-var (
-	throttle = time.Tick(7 * time.Second)
-	routes   = struct {
-		sync.RWMutex
-		active   bool
-		mappings map[string]string
-	}{mappings: make(map[string]string)}
+        "os"
+	"runtime"
 )
 
 func reload() {
-	<-throttle
-	if !routes.active {
-		// generate configuration
-		log.Printf("generate haproxy configuration")
-		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-		// reload haproxy
-		log.Printf("reload haproxy SIGUSR2 PID %d", pid)
-		syscall.Kill(pid, syscall.SIGUSR2)
-		// set status
-		log.Printf("routes activated")
-		routes.Lock()
-		routes.active = true
-		routes.Unlock()
-	}
+	// generate configuration
+	log.Printf("generate haproxy configuration")
+	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
+
+	// reload haproxy
+	log.Printf("reload haproxy SIGUSR2 PID %d", pid)
+	syscall.Kill(pid, syscall.SIGUSR2)
+
+	// set status
+	log.Printf("routes activated")
 }
 
 func router(exit chan bool, port string) {
@@ -78,6 +65,7 @@ func handle(srcConn net.Conn) {
 					return
 				}
 			}
+			log.Printf("Hostname found: %s", hostname)
 			break
 		}
 	}
@@ -92,7 +80,6 @@ func handle(srcConn net.Conn) {
 		errc := make(chan error, 1)
 		go func(chan<- error) {
 			log.Printf("Transient proxying: %s", hostname)
-			addRoute(hostname, backend)
 			dstConn.Write(read)
 			_, err := io.Copy(dstConn, reader)
 			errc <- err
@@ -103,11 +90,15 @@ func handle(srcConn net.Conn) {
 			errc <- err
 		}(errc)
 		<-errc
+		os.Setenv("BE_" + hostname, backend)
+		reload()
 	}
+	log.Printf("Running go routines: %d", runtime.NumGoroutine())
 }
 
 func isMember(hostname string) bool {
 	// Resolve target ip address for hostname
+	log.Printf("Resolve target ip address for hostname: %s", hostname)
 	backendIPAddr, err := net.ResolveIPAddr("ip", hostname)
 	if err != nil {
 		log.Printf("Error resolving target ip address: %s", err.Error())
@@ -130,73 +121,30 @@ func isMember(hostname string) bool {
 	return false
 }
 
-func addRoute(hostname, backend string) {
-	defer cleanupRoutes()
-	if _, exists := routes.mappings[hostname]; !exists {
-		routes.Lock()
-		defer routes.Unlock()
-		routes.mappings[hostname] = backend
-		routes.active = false
-		log.Printf("Adding hostname %s with backend %s to swarm-router", hostname, backend)
-		go reload()
-	}
-}
-
-func delRoute(hostname string) {
-	defer cleanupRoutes()
-	if _, exists := routes.mappings[hostname]; exists {
-		routes.Lock()
-		defer routes.Unlock()
-		delete(routes.mappings, hostname)
-		routes.active = false
-		log.Printf("Removing %s from swarm-router", hostname)
-		go reload()
-	}
-}
-
-func cleanupRoutes() {
-	for hostname := range routes.mappings {
-		if !isMember(hostname) {
-			routes.Lock()
-			defer routes.Unlock()
-			delete(routes.mappings, hostname)
-			routes.active = false
-			log.Printf("Removing %s from swarm-router due to cleanup", hostname)
-			go reload()
-		}
-	}
-}
-
 func getBackend(hostname string) string {
 	var backend string
-	fqdn := strings.Split(hostname, ".")
-	for i := range fqdn {
-		// check fqdn for service shortnames
-		hostname = strings.Join(fqdn[0:i+1], ".")
-		log.Printf("searchBackend hostname: %s", hostname)
-		if isMember(hostname) {
-			// Search default port for fqdn
-			for _, searchPort := range strings.Split(defaultBackendPorts, " ") {
-				if searchPort != "" {
-					dstConn, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
-					if dstConn != nil {
-						dstConn.Close()
-						backend = net.JoinHostPort(hostname, searchPort)
-						return backend
-					}
-				}
-			}
-			// Set special port if any
-			for _, portOverride := range strings.Split(overrideBackendPorts, " ") {
-				if portOverride != "" {
-					backend, port, _ := net.SplitHostPort(portOverride)
-					if strings.HasPrefix(hostname, backend) {
-						backend = net.JoinHostPort(hostname, port)
-						return backend
-					}
-				}
+	log.Printf("searchBackend hostname: %s", hostname)
+	// Search default port for fqdn
+	for _, searchPort := range strings.Split(defaultBackendPorts, " ") {
+		if searchPort != "" {
+			dstConn, _ := net.Dial("tcp", net.JoinHostPort(hostname, searchPort))
+			if dstConn != nil {
+				dstConn.Close()
+				backend = net.JoinHostPort(hostname, searchPort)
+				return backend
 			}
 		}
 	}
+	// Set special port if any
+	for _, portOverride := range strings.Split(overrideBackendPorts, " ") {
+		if portOverride != "" {
+			backend, port, _ := net.SplitHostPort(portOverride)
+			if strings.HasPrefix(hostname, backend) {
+				backend = net.JoinHostPort(hostname, port)
+				return backend
+			}
+		}
+	}
+	log.Printf("Backend found: %s", backend)
 	return backend
 }

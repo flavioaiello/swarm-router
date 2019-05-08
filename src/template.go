@@ -22,6 +22,18 @@ func envMap() map[string]string {
 	return m
 }
 
+func backendMap() map[string]string {
+	m := make(map[string]string)
+	for _, kv := range os.Environ() {
+		if strings.HasPrefix(kv, "BE_") {
+			kv = kv[3:]
+			x := strings.SplitN(kv, "=", 2)
+			m[x[0]] = x[1]
+		}
+	}
+	return m
+}
+
 func newTemplate(name string) *template.Template {
 	tmpl := template.New(name).Funcs(template.FuncMap{
 		"split":  strings.Split,
@@ -33,7 +45,7 @@ func newTemplate(name string) *template.Template {
 func executeTemplate(tmpl string, cfg string) {
 	config := new(conf)
 	config.Env = envMap()
-	config.Mappings = routes.mappings
+	config.Mappings = backendMap()
 
 	template, err := newTemplate(filepath.Base(tmpl)).ParseFiles(tmpl)
 	if err != nil {

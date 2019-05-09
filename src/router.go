@@ -13,14 +13,19 @@ import (
 )
 
 func reload() {
-	// generate configuration
+	// Cleanup backends
+	for backend := range backendMap() {
+		if !isMember(backend) {
+			os.Unsetenv(backend)
+		}
+	}
+	// Generate configuration
 	log.Printf("Generate haproxy configuration")
 	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
-
-	// reload haproxy
+	// Reload haproxy
 	log.Printf("Reload haproxy SIGUSR2 PID %d", pid)
 	syscall.Kill(pid, syscall.SIGUSR2)
-
+	// Print actual number of go routines
 	log.Printf("Running go routines: %d", runtime.NumGoroutine())
 }
 

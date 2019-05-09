@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"github.com/robfig/cron"
 )
 
 var (
@@ -55,6 +56,11 @@ func init() {
 }
 
 func main() {
+	// Cleanup scheduler
+	c := cron.New()
+	c.AddFunc("@daily", reload)
+	c.Start()
+	// Start swarm-router and haproxy
 	exit := make(chan bool, 1)
 	go router(exit, swarmRouterPort)
 	go haproxy(exit)

@@ -6,30 +6,22 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
+	"runtime"
 	"strings"
 	"syscall"
-        "os"
-	"runtime"
-	"sync"
-)
-
-var (
-	once sync.Once
 )
 
 func reload() {
-	once.Do(func() {
-		// generate configuration
-		log.Printf("generate haproxy configuration")
-		executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
+	// generate configuration
+	log.Printf("Generate haproxy configuration")
+	executeTemplate("/usr/local/etc/haproxy/haproxy.tmpl", "/usr/local/etc/haproxy/haproxy.cfg")
 
-		// reload haproxy
-		log.Printf("reload haproxy SIGUSR2 PID %d", pid)
-		syscall.Kill(pid, syscall.SIGUSR2)
+	// reload haproxy
+	log.Printf("Reload haproxy SIGUSR2 PID %d", pid)
+	syscall.Kill(pid, syscall.SIGUSR2)
 
-		// set status
-		log.Printf("routes activated")
-	})
+	log.Printf("Running go routines: %d", runtime.NumGoroutine())
 }
 
 func router(exit chan bool, port string) {
@@ -84,11 +76,15 @@ func handle(srcConn net.Conn) {
 			return
 		}
 		defer dstConn.Close()
+		go func() {
+			os.Setenv("BE_"+hostname, backend)
+			reload()
+		}()
 		errc := make(chan error, 1)
 		go func(chan<- error) {
-			log.Printf("Transient proxying: %s", hostname)
 			dstConn.Write(read)
 			_, err := io.Copy(dstConn, reader)
+			log.Printf("Transient proxying: %s", hostname)
 			errc <- err
 		}(errc)
 		go func(chan<- error) {
@@ -96,11 +92,8 @@ func handle(srcConn net.Conn) {
 			log.Printf("Closing transient proxy")
 			errc <- err
 		}(errc)
-		os.Setenv("BE_" + hostname, backend)
-		reload()
 		<-errc
 	}
-	log.Printf("Running go routines: %d", runtime.NumGoroutine())
 }
 
 func isMember(hostname string) bool {

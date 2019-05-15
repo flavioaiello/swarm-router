@@ -1,11 +1,11 @@
 package main
 
 import (
+	"github.com/robfig/cron"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
-	"github.com/robfig/cron"
 )
 
 var (

@@ -4,6 +4,8 @@ services:
 
   swarm-router:
     image: flavioaiello/swarm-router:latest
+    environment:
+      - BACKENDS_VERIFY_TLS=app2.localtest.me
     ports:
       - "80:80"
       - "8080:8080"

@@ -23,6 +23,27 @@ services:
         delay: 5s
         max_attempts: 10
 
+  app2:
+    image: jwilder/whoami:latest
+    networks:
+      default:
+      swarm_routing:
+        aliases:
+          - app2.localtest.me
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 8M
+        limits:
+          memory: 8M
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
+
 networks:
   default:
     internal: true

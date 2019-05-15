@@ -33,10 +33,20 @@ func backendMap() map[string]string {
 	return m
 }
 
+func verify(mapping string) bool {
+	for _, backendVerifyTLS := range strings.Split(backendsVerifyTLS, " ") {
+		if backendVerifyTLS == mapping {
+			return true
+		}
+	}
+	return false
+}
+
 func newTemplate(name string) *template.Template {
 	tmpl := template.New(name).Funcs(template.FuncMap{
 		"split":  strings.Split,
 		"splitN": strings.SplitN,
+		"verify": verify,
 	})
 	return tmpl
 }

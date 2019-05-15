@@ -69,8 +69,8 @@ OVERRIDE_BACKEND_PORTS=myapp:6457 myotherapp:7465
 ## Certificates
 When TLS offloading comes into action, according fullchain certificates containing the private key should be provisioned on `/certs` host volume mount as `service.com.pem`. Preferably this one should be mounted using docker secrets.
 
+## TLS Mutual Authentication
+TLS mutual authentication can simply be enabled by adding space separated fqdn service names to the `BACKENDS_VERIFY_TLS` environment variable and the CA to the /certs/ directory. 
+
 ## Performance
 This one is built for high throughput and little CPU usage. Haproxy implements zero-copy and tcp-splicing based TCP handling. Even with golang now supporting [splicing](https://github.com/golang/go/issues/10948), haproxy is ways more superior in terms of cpu consumption and latency.
-
-#### Todos
-- [ ] add termination with ACME autocerts

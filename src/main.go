@@ -24,6 +24,9 @@ var (
 
 	// backends port rules
 	overrideBackendPorts = getEnv("OVERRIDE_BACKEND_PORTS", "")
+
+	// backends verify tls
+	backendsVerifyTLS = getEnv("BACKENDS_VERIFY_TLS", "")
 )
 
 func getEnv(key, defaultValue string) string {

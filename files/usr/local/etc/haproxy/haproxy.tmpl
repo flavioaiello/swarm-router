@@ -34,7 +34,7 @@ listen stats
 
 frontend ingress{{ range $port := split $.Env.HTTP_PORTS " " }}
     bind *:{{ $port }}{{ end }}{{ range $port := split $.Env.TLS_PORTS " " }}
-    bind *:{{ $port }} ssl crt /certs/{{ end }}
+    bind *:{{ $port }} ssl crt /certs/ ca-file /certs/ca.crt verify optional{{ end }}
     tcp-request inspect-delay 5s
     tcp-request content accept if { req.ssl_hello_type 1 }{{ range $mapping, $backend := $.Mappings }}
     use_backend {{ $mapping }} if { hdr_dom(host) -i {{ $mapping }} or req.ssl_sni,lower,field(1,':') -i {{ $mapping }} }{{ end }}
@@ -47,5 +47,6 @@ backend swarm-router
     server swarm-router 127.0.0.1:{{ $.Env.SWARM_ROUTER_PORT }} check
 
 {{ range $mapping, $backend := $.Mappings }}backend {{ $mapping }}
+    {{ if verify $mapping }}tcp-request content reject if !{ ssl_c_used 1 } {{ end }}
     server {{ $mapping }} {{ $backend }} check resolvers docker
 {{ end }}

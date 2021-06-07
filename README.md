@@ -35,7 +35,7 @@ Now the endpoints below should be reachable:
 ## Mode 2 - Ingress routing with isolated stacks
 Deploying the same stack multiple times, eg. for development, testing and production, the service names collission can be avoided only by an additional router per stack. The according inner service name and port will be discoverd automaticly 
 
-![Stack isolation](https://github.com/flavioaiello/swarm-router/blob/master/swarm-router.png?raw=true)
+![Stack isolation](https://github.com/flavioaiello/swarm-router/blob/main/swarm-router.png?raw=true)
 
 ```
 docker stack deploy -c swarm.yml swarm

@@ -1,11 +1,11 @@
-version: '3.7'
+version: '3.8'
 
 services:
 
-  swarm-router:
-    image: flavioaiello/swarm-router:latest
+  proxy:
+    image: flavioaiello/forward-haproxy:latest
     environment:
-      - BACKENDS_VERIFY_TLS=app2.localtest.me
+      - RESOLVER=127.0.0.11
     ports:
       - "80:80"
       - "8080:8080"
@@ -13,24 +13,64 @@ services:
       - "8443:8443"
       - "1111:1111"
     networks:
-      - routing
+      - default
     healthcheck:
-      test: nc -w 7 -zvv 0.0.0.0 1111
+      # Use HAProxy's stats frontend for health checks instead of netcat
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:1111/"]
       interval: 30s
-      timeout: 30s
-      retries: 20
+      timeout: 10s
+      retries: 5
     deploy:
+      mode: global
       resources:
         reservations:
           cpus: '0.1'
           memory: 128M
         limits:
           memory: 128M
-      mode: global
       restart_policy:
         condition: any
 
+  app1:
+    image: nginx:alpine
+    networks:
+      default:
+        aliases:
+          - app1.localtest.me
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+        limits:
+          memory: 32M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
+
+  app2:
+    image: nginx:alpine
+    networks:
+      default:
+        aliases:
+          - app2.localtest.me
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+        limits:
+          memory: 32M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 10
+
 networks:
-  routing:
+  default:
     driver: overlay
-    attachable: true
